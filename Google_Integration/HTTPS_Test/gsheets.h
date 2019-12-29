@@ -22,7 +22,7 @@ class GSheets
         void connectToHost();
 
         //Will write to sheet and cells in a1Notation with option
-        void updateSheet(String a1Notation, WriteOption option);
+        void updateSheet(String a1Notation, std::vector<std::vector<String>> cells, WriteOption option);
 
         WiFiClientSecure getClient();
         // void sendTest();

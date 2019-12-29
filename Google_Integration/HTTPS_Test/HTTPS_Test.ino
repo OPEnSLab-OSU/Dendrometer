@@ -3,6 +3,7 @@
 #include <ArduinoJson.h>
 #include "gsheets.h"
 #include "config.h"
+#include "vector"
 
 
 
@@ -21,19 +22,20 @@ void setup() {
 }
 
 void loop() {
-  String title = "";
-  String headers = "";
-  String body = "";
-  bool finishedHeaders = false;
-  bool currentLineIsBlank = true;
-  bool gotResponse = false;
- 
-  char host[] = "sheets.googleapis.com";
 
+ 
   api.connectToHost();
   WiFiClientSecure client = api.getClient();
 
-  api.updateSheet("Sheet1!A1:D1", PARSED);
+  std::vector<std::vector<String>> test = {{"asdffgdsa", "12345", "=2*3", "foo"},
+                        {"asdffgdsa", "12345", "=2*3", "foo"},
+                        {"asdffgdsa", "12345", "=2*3", "foo"}};
+
+  String testValues[3][4] = {{"asdffgdsa", "12345", "=2*3", "foo"},
+                        {"asdffgdsa", "12345", "=2*3", "foo"},
+                        {"asdffgdsa", "12345", "=2*3", "foo"}};
+
+  api.updateSheet("Sheet1!A21:D23", test, PARSED);
 
   // DynamicJsonDocument doc(2048);
   // DeserializationError err = deserializeJson(doc, body);
