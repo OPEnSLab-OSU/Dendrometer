@@ -5,12 +5,15 @@
 
 
 #define HOST "sheets.googleapis.com"
+#define ROOTHOST "googleapis.com"
 
-GSheets::GSheets(String clientID, String clientSecret, String refresh)
+GSheets::GSheets(String clientID, String clientSecret, String refresh, String sheetID)
 {
     this->clientID = clientID;
     this->clientSecret = clientSecret;
     this->refresh = refresh;
+    this->sheetID = sheetID;
+    this->refreshKey(); //Does not work if wifi is not connected, but will be called regardless later
 }
 
 GSheets::GSheets(String oAuthKey, String sheetID)
@@ -37,6 +40,7 @@ WiFiClientSecure GSheets::getClient()
 
 void GSheets::updateSheet(String a1Notation, std::vector<std::vector<String>> cells, WriteOption option)
 {
+    this->connectToHost();
     String inputOption;
     switch(option)
     {
@@ -49,12 +53,6 @@ void GSheets::updateSheet(String a1Notation, std::vector<std::vector<String>> ce
     }
     String url = "/v4/spreadsheets/" + this->sheetID + "/values/" + a1Notation + "?valueInputOption=" + inputOption;
     String oauth = "Bearer " + this->oAuthKey;
-
-    //TODO: Use vectors/templates to pass in and parse to surround with escape quotes
-
-    String test[2][4] = {{"asdffgdsa", "12345", "=2*3", "foo"},
-                        {"asdffgdsa", "12345", "=2*3", "foo"}};
-    // std::vector<String> test = {"asdffgdsa", "12345", "=2*3", "foo"};
 
     String value = "[";
     for(int i = 0; i < cells.size(); i++)
@@ -74,13 +72,19 @@ void GSheets::updateSheet(String a1Notation, std::vector<std::vector<String>> ce
     this->client.print(String("PUT ") + url + " HTTP/1.0\r\n" + "Authorization: " + oauth + "\r\n" + "Accept: */*\r\n" + "Content-Length: " + payload.length() + "\r\n" + "Cache-Control: no-cache\r\n" + "Host: " + HOST + "\r\n\r\n" + payload + "\r\n\r\n");
     Serial.println("Sent");
     this->getServerResponse();
+    DynamicJsonDocument doc = jsonfyBody();
+    int code = doc["error"]["code"];
+    if(code == 401)
+    {
+        this->refreshKey();
+        this->updateSheet(a1Notation, cells, option);
+    }
 }
 
 void GSheets::getServerResponse()
 {
     bool finishedHeaders = false;
     bool currentLineIsBlank = true;
-    bool gotResponse = false;
 
     this->headers = "";
     this->body = "";
@@ -110,5 +114,33 @@ void GSheets::getServerResponse()
   Serial.println(this->headers);
     Serial.println("BODY");
   Serial.println(this->body);
-  delay(10000);
+
+  delay(5000);
+}
+
+//TODO: look if DynamicJson needs to be deallocated
+DynamicJsonDocument GSheets::jsonfyBody()
+{
+    DynamicJsonDocument doc(2048);
+    DeserializationError err = deserializeJson(doc, this->body);
+    if(err)
+    {
+        Serial.print("ERR");
+        Serial.println(err.c_str());
+    }
+    return doc;
+}
+
+void GSheets::refreshKey()
+{
+    this->connectToHost();
+    String url = "/token";
+    String payload = "refresh_token=" + this->refresh + "&client_id=" + this->clientID + "&client_secret=" + this->clientSecret + "&grant_type=refresh_token";
+    this->client.print(String("POST ") + url + " HTTP/1.0\r\n" + "Content-Type: application/x-www-form-urlencoded\r\n" + "Content-Length: " + payload.length() + "\r\n" +"Host: oauth2." + ROOTHOST + "\r\n\r\n" + payload + "\r\n\r\n");
+    this->getServerResponse();
+    DynamicJsonDocument doc = jsonfyBody();
+    String test = doc["access_token"];
+    Serial.println("NEWKEY");
+    Serial.println(test);
+    this->oAuthKey = test;
 }

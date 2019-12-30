@@ -15,7 +15,7 @@ class GSheets
 {
     public:
         //Constructor to create GSheets Object
-        GSheets(String clientID, String clientSecret, String refresh);
+        GSheets(String clientID, String clientSecret, String refresh, String sheetID);
         GSheets(String oAuthKey, String sheetID);
         
         //Connects client to "sheets.googleapis.com", **MAKE SURE WIFI IS CONNECTED TO BOARD BEFORE**
@@ -39,6 +39,8 @@ class GSheets
         WiFiClientSecure client;
 
         void getServerResponse();
+        void refreshKey();
+        DynamicJsonDocument jsonfyBody();
 };
 
 #endif
