@@ -89,7 +89,7 @@ void GSheets::getServerResponse()
     this->headers = "";
     this->body = "";
 
-    delay(2000);
+    delay(1000);
     while(this->client.available())
     {
         char c = this->client.read();
@@ -114,8 +114,7 @@ void GSheets::getServerResponse()
   Serial.println(this->headers);
     Serial.println("BODY");
   Serial.println(this->body);
-
-  delay(5000);
+//   delay(5000);
 }
 
 //TODO: look if DynamicJson needs to be deallocated
