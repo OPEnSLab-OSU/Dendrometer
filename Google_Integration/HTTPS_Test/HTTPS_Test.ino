@@ -21,11 +21,25 @@ void setup() {
 
 void loop() {
 
- 
-  std::vector<std::vector<String>> test = {{"asdffgdsa", "12345", "=2*3", "foo"},
-                        {"asdffgdsa", "12345", "=2*3", "foo"},
-                        {"asdffgdsa", "12345", "=2*3", "foo"}};
+  //Create header for Google Sheet Table
+  std::vector<std::vector<String>> header = {{"PWM Value", "Some Value", "Temperature", "Humidity"}};
+  api.updateSheet("Sheet1!A1:D1", header, PARSED);
 
-  api.updateSheet("Sheet1!A21:D23", test, PARSED);
-
+  int i = 1;
+  int PWM;
+  int rand;
+  int temp;
+  int humid;
+  while(1)
+  {
+    delay(1000); //Simulate sensing value every second
+    i+=1;
+    PWM = i+1;
+    rand = i+2;
+    temp = i+3;
+    humid = i+4;
+    std::vector<std::vector<String>> row = {{String(PWM), String(rand), String(temp), String(humid)}};
+    String a1Val = "Sheet1!A" + String(i) + ":D" + String(i);
+    api.updateSheet(a1Val, row, PARSED);
+  }
 }
