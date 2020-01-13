@@ -1,6 +1,4 @@
-#include "ESP8266WiFi.h"
-#include <WiFiClientSecure.h>
-#include <ArduinoJson.h>
+#include <WiFi101.h>
 #include "gsheets.h"
 #include "config.h"
 #include "vector"
@@ -8,10 +6,11 @@
 
 GSheets api(clientID, clientSecret, refreshToken, sheetID);
 
-void setup() {
 
+void setup() {
+  WiFi.setPins(8, 7, 4, 2);
   Serial.begin(9600);
-    WiFi.begin(ssid, password);
+    WiFi.begin(ssid);
     while (WiFi.status() != WL_CONNECTED) {
       delay(1000);
       Serial.println("Connecting to WiFi..");

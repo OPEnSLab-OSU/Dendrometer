@@ -1,6 +1,12 @@
 #include "Arduino.h"
 #ifndef G_SHEETS
 #define G_SHEETS
+#include "vector"
+#include <ArduinoJson.h>
+#include <WiFi101.h>
+
+
+
 
 /**
  *
@@ -24,8 +30,7 @@ class GSheets
         //Will write to sheet and cells in a1Notation with option
         void updateSheet(String a1Notation, std::vector<std::vector<String>> cells, WriteOption option);
 
-        WiFiClientSecure getClient();
-        // void sendTest();
+        WiFiSSLClient getClient();
     private:
         String clientID;
         String clientSecret;
@@ -36,7 +41,7 @@ class GSheets
         String headers;
         String body;
 
-        WiFiClientSecure client;
+        WiFiSSLClient client;
 
         void getServerResponse();
         void refreshKey();

@@ -1,6 +1,3 @@
-#include <WiFiClientSecure.h>
-#include <ArduinoJson.h>
-#include "Arduino.h"
 #include "gsheets.h"
 
 
@@ -13,7 +10,6 @@ GSheets::GSheets(String clientID, String clientSecret, String refresh, String sh
     this->clientSecret = clientSecret;
     this->refresh = refresh;
     this->sheetID = sheetID;
-    this->refreshKey(); //Does not work if wifi is not connected, but will be called regardless later
 }
 
 GSheets::GSheets(String oAuthKey, String sheetID)
@@ -26,14 +22,14 @@ GSheets::GSheets(String oAuthKey, String sheetID)
 //TODO: Think about if Serial is not initialized
 void GSheets::connectToHost()
 {
-    this->client.setInsecure();
+    // this->client.setInsecure();
     if(this->client.connect(HOST, 443))
     {
         Serial.println("Connected to host");
     }
 }
 
-WiFiClientSecure GSheets::getClient()
+WiFiSSLClient GSheets::getClient()
 {
     return this->client;
 }
@@ -130,6 +126,7 @@ DynamicJsonDocument GSheets::jsonfyBody()
     return doc;
 }
 
+//Wifi must be connected in order to call (or else will crash)
 void GSheets::refreshKey()
 {
     this->connectToHost();
