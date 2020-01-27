@@ -23,10 +23,17 @@ GSheets::GSheets(String oAuthKey, String sheetID)
 void GSheets::connectToHost()
 {
     // this->client.setInsecure();
-    if(this->client.connect(HOST, 443))
-    {
-        Serial.println("Connected to host");
-    }
+//    if(this->client.connect(HOST, 443))
+//    {
+//        Serial.println("Connected to host");
+//    }
+
+  while(!this->client.connect(HOST, 443))
+  {
+    Serial.println("Connecting to host...");
+  }
+  Serial.println("Connected...");
+    
 }
 
 WiFiSSLClient GSheets::getClient()
@@ -85,7 +92,7 @@ void GSheets::getServerResponse()
     this->headers = "";
     this->body = "";
 
-    delay(1000);
+    delay(3000);
     while(this->client.available())
     {
         char c = this->client.read();
