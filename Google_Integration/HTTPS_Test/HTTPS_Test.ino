@@ -73,8 +73,6 @@ uint32_t bitbang() {
       value |= (1U << i);
   }
   digitalWrite(CS, HIGH);
-  Serial.println();
-
   return value;
 }
 
@@ -84,7 +82,7 @@ void loop() {
   api.updateSheet("Sheet1!A1:E1", header, PARSED);
 
 
-  int i = 1;
+  int i = 414;
   int PWM;
   int temp;
   int humid;
@@ -95,14 +93,22 @@ void loop() {
     delay(2000); //Sensing value every 5 seconds (3 + 2)
     
     //Getting Serial data
-    uint32_t value = bitbang();
-    uint32_t readval = value & 0xFFF;
-    uint32_t newval = 0;
-    for (int i = 11; i >= 0; i--) 
+//      x16 for average
+    int average = 0;
+
+    for(int j = 0; j < 16; j++)
     {
-      uint32_t exists = (readval & (1 << i)) ? 1 : 0;
-      newval |= (exists << (11 - i));
+      uint32_t value = bitbang();
+      uint32_t readval = value & 0xFFF;
+      uint32_t newval = 0;
+      for (int i = 11; i >= 0; i--) 
+      {
+        uint32_t exists = (readval & (1 << i)) ? 1 : 0;
+        newval |= (exists << (11 - i));
+      }
+      average += newval;
     }
+    average /= 16;
 
     //Increment Row
     i+=1;
@@ -118,10 +124,10 @@ void loop() {
     humid = sht31.readHumidity();
 
     //Building Google Sheet Row and sending
-    std::vector<std::vector<String>> row = {{time, "", String(newval), String(temp), String(humid)}};
+    std::vector<std::vector<String>> row = {{time, "", String(average), String(temp), String(humid)}};
     String a1Val = "Sheet1!A" + String(i) + ":E" + String(i);
     api.updateSheet(a1Val, row, PARSED);
 
-    Serial.println(newval);
+    Serial.println(average);
   }
 }

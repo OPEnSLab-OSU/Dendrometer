@@ -28,9 +28,18 @@ void GSheets::connectToHost()
 //        Serial.println("Connected to host");
 //    }
 
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.println("Connecting to WiFi..");
+  }
+  Serial.println("Connected to the WiFi network");
+
+  client.stop();
   while(!this->client.connect(HOST, 443))
   {
     Serial.println("Connecting to host...");
+    client.stop();
+
   }
   Serial.println("Connected...");
     
