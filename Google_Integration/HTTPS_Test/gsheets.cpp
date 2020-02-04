@@ -28,11 +28,11 @@ void GSheets::connectToHost()
 //        Serial.println("Connected to host");
 //    }
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    Serial.println("Connecting to WiFi..");
-  }
-  Serial.println("Connected to the WiFi network");
+//  while (WiFi.status() != WL_CONNECTED) {
+//    delay(1000);
+//    Serial.println("Connecting to WiFi..");
+//  }
+//  Serial.println("Connected to the WiFi network");
 
   client.stop();
   while(!this->client.connect(HOST, 443))
@@ -42,7 +42,11 @@ void GSheets::connectToHost()
     WiFi.end();
     delay(10);
     WiFi.begin("OSU_Access");
-//    If this runs more than 10-20 times, need to reset
+//    TODO: If this runs more than 10-20 times, need to reset
+//             so put 41-44 only if "Connecting to host..." runs multiple times
+
+// WORKS, but shifts the columns that were being written to into separate columns, need to fix
+//        Tried interrupts, but are not supported. Need to implement in different logic
 
   }
   Serial.println("Connected...");
@@ -88,12 +92,28 @@ void GSheets::updateSheet(String a1Notation, std::vector<std::vector<String>> ce
     this->client.print(String("PUT ") + url + " HTTP/1.0\r\n" + "Authorization: " + oauth + "\r\n" + "Accept: */*\r\n" + "Content-Length: " + payload.length() + "\r\n" + "Cache-Control: no-cache\r\n" + "Host: " + HOST + "\r\n\r\n" + payload + "\r\n\r\n");
     Serial.println("Sent");
     this->getServerResponse();
-    DynamicJsonDocument doc = jsonfyBody();
+    DynamicJsonDocument doc(2048);
+    try{
+        doc = jsonfyBody();
+    }catch(int n)
+    {
+      Serial.println("CAUGHT");
+      this->connectToHost();
+      this->client.print(String("PUT ") + url + " HTTP/1.0\r\n" + "Authorization: " + oauth + "\r\n" + "Accept: */*\r\n" + "Content-Length: " + payload.length() + "\r\n" + "Cache-Control: no-cache\r\n" + "Host: " + HOST + "\r\n\r\n" + payload + "\r\n\r\n");
+      this->getServerResponse();
+//      this->updateSheet(a1Notation, cells, option);
+//      FIX THIS RECURSIVE CALL, maybe make a alternate function for error
+      doc = jsonfyBody();
+//      TODO: This statement assumes that disconnect will only happen once and not twice in a row, need to fix
+    }
     int code = doc["error"]["code"];
     if(code == 401)
     {
         this->refreshKey();
+        this->connectToHost();
         this->updateSheet(a1Notation, cells, option);
+//        FIX RECURSIVE CALL, maybe make a alternate function for error
+//        Maybe don't need to bc it is last statement in function?
     }
 }
 
@@ -142,6 +162,7 @@ DynamicJsonDocument GSheets::jsonfyBody()
     {
         Serial.print("ERR");
         Serial.println(err.c_str());
+        throw(20);
     }
     return doc;
 }
