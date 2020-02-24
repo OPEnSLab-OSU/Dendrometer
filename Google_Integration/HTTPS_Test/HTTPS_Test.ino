@@ -76,58 +76,83 @@ uint32_t bitbang() {
   return value;
 }
 
-void loop() {
-  //Create header for Google Sheet Table
-  std::vector<std::vector<String>> header = {{"Time", "Control Temp", "Value", "Actual Temp", "Humidity"}};
-  api.updateSheet("Sheet1!A1:E1", header, PARSED);
-
-
-  int i = 414;
-  int PWM;
-  int temp;
-  int humid;
-  String time;
-  while(1)
-  {    
-
-    delay(2000); //Sensing value every 5 seconds (3 + 2)
-    
-    //Getting Serial data
-//      x16 for average
-    int average = 0;
-
-    for(int j = 0; j < 16; j++)
-    {
-      uint32_t value = bitbang();
-      uint32_t readval = value & 0xFFF;
+uint32_t convertBits(uint32_t num) {
+      uint32_t readval = num & 0xFFF;
       uint32_t newval = 0;
       for (int i = 11; i >= 0; i--) 
       {
         uint32_t exists = (readval & (1 << i)) ? 1 : 0;
         newval |= (exists << (11 - i));
       }
-      average += newval;
+      return newval;
+}
+
+void loop() {
+  //Create header for Google Sheet Table
+  // std::vector<std::vector<String>> header = {{"Time", "Control Temp", "Value", "Actual Temp", "Humidity"}};
+  // api.updateSheet("Sheet1!A1:E1", header, PARSED);
+
+
+  // int i = 1;
+  // int PWM;
+  // int temp;
+  // int humid;
+  // String time;
+
+    uint32_t curr = bitbang();
+    // curr = curr & 0xFFF;
+    curr = convertBits(curr);
+    // Serial.println(curr, BIN);
+    uint32_t prevTwoSig = curr & 0xC00;
+
+  while(1)
+  {    
+    delay(2000); //Sensing value every 5 seconds (3 + 2)
+    uint32_t value = bitbang();
+    value = convertBits(value);
+    uint32_t currTwoSig = value & 0xC00;
+    if((currTwoSig == 0xC00 && prevTwoSig == 0x0) || (prevTwoSig == 0xC00 && currTwoSig == 0x0)) {
+      Serial.println("ROLLOVER");
     }
-    average /= 16;
+    Serial.println(value);
 
-    //Increment Row
-    i+=1;
+    prevTwoSig = currTwoSig;
 
-    //Getting Time and Date
-    now = rtc.now();
-    time = String(now.month()) + "-" + String(now.day()) + "-" + String(now.hour()) + ":" + String(now.minute()) + ":" + String(now.second());
-//    PWM = pulseIn(11, HIGH);
-//    PWM = val;
 
-    //Getting Temp and Humid
-    temp = sht31.readTemperature();
-    humid = sht31.readHumidity();
+    //Getting Serial data
+//      x16 for average
+    // int average = 0;
 
-    //Building Google Sheet Row and sending
-    std::vector<std::vector<String>> row = {{time, "", String(average), String(temp), String(humid)}};
-    String a1Val = "Sheet1!A" + String(i) + ":E" + String(i);
-    api.updateSheet(a1Val, row, PARSED);
+    // for(int j = 0; j < 16; j++)
+    // {
+    //   uint32_t value = bitbang();
+    //   uint32_t readval = value & 0xFFF;
+    //   uint32_t newval = 0;
+    //   for (int i = 11; i >= 0; i--) 
+    //   {
+    //     uint32_t exists = (readval & (1 << i)) ? 1 : 0;
+    //     newval |= (exists << (11 - i));
+    //   }
+    //   average += newval;
+    // }
+    // average /= 16;
 
-    Serial.println(average);
+    // //Increment Row
+    // i+=1;
+
+    // //Getting Time and Date
+    // now = rtc.now();
+    // time = String(now.month()) + "-" + String(now.day()) + "-" + String(now.hour()) + ":" + String(now.minute()) + ":" + String(now.second());
+
+    // //Getting Temp and Humid
+    // temp = sht31.readTemperature();
+    // humid = sht31.readHumidity();
+
+    // //Building Google Sheet Row and sending
+    // std::vector<std::vector<String>> row = {{time, "", String(average), String(temp), String(humid)}};
+    // String a1Val = "Sheet1!A" + String(i) + ":E" + String(i);
+    // api.updateSheet(a1Val, row, PARSED);
+
+    // Serial.println(average);
   }
 }

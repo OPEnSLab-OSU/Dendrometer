@@ -39,9 +39,9 @@ void GSheets::connectToHost()
   {
     Serial.println("Connecting to host...");
     client.stop();
-    WiFi.end();
-    delay(10);
-    WiFi.begin("OSU_Access");
+    // WiFi.end();
+    // delay(10);
+    // WiFi.begin("OSU_Access");
 //    If this runs more than 10-20 times, need to reset
 
   }
