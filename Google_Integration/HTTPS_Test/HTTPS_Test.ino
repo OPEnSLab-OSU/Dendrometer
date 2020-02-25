@@ -99,23 +99,32 @@ void loop() {
   // int humid;
   // String time;
 
-    uint32_t curr = bitbang();
-    // curr = curr & 0xFFF;
-    curr = convertBits(curr);
-    // Serial.println(curr, BIN);
-    uint32_t prevTwoSig = curr & 0xC00;
+    uint32_t start = bitbang();
+    start = convertBits(start);
+    uint32_t prevTwoSig = start & 0xC00;
+    float elapsed = 0;
 
   while(1)
-  {    
+  { 
     delay(2000); //Sensing value every 5 seconds (3 + 2)
-    uint32_t value = bitbang();
-    value = convertBits(value);
-    uint32_t currTwoSig = value & 0xC00;
-    if((currTwoSig == 0xC00 && prevTwoSig == 0x0) || (prevTwoSig == 0xC00 && currTwoSig == 0x0)) {
-      Serial.println("ROLLOVER");
+    uint32_t curr = bitbang();
+    curr = convertBits(curr);
+    uint32_t currTwoSig = curr & 0xC00;
+    if((currTwoSig == 0xC00 && prevTwoSig == 0x0)) {
+      Serial.println("ROLLOVER UNDERFLOW");
+      elapsed -= 2.0;
+    } else if (prevTwoSig == 0xC00 && currTwoSig == 0x0) {
+      Serial.println("ROLLOVER OVERFLOW");
+      elapsed += 2.0;
     }
-    Serial.println(value);
+    Serial.print("Current value");
+    Serial.println(curr);
 
+    float distance = (elapsed + ((2.0 * ((int) curr - (int) start))/4095.0));
+    Serial.print("Total distance: ");
+    Serial.print(distance);
+
+    
     prevTwoSig = currTwoSig;
 
 
