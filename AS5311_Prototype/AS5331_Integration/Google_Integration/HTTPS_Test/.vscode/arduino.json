@@ -1,5 +1,0 @@
-{
-    "port": "/dev/cu.usbmodem1411",
-    "board": "adafruit:samd:adafruit_feather_m0",
-    "configuration": "usbstack=arduino,debug=off"
-}
