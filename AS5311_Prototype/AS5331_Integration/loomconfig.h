@@ -1,0 +1,22 @@
+"{\
+	'general':\
+	{\
+		'name':'Device',\
+		'instance':1,\
+		'interval':2000\
+	},\
+	'components':[\
+		{\
+			'name':'SHT31D',\
+			'params':'default'\
+		},\
+		{\
+			'name':'SD',\
+			'params':'default'\
+		},\
+		{\
+			'name':'DS3231',\
+			'params':'default'\
+		}\
+	]\
+}"
