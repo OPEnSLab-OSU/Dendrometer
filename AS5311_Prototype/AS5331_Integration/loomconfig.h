@@ -3,7 +3,7 @@
 	{\
 		'name':'Device',\
 		'instance':1,\
-		'interval':2000\
+		'interval':1000\
 	},\
 	'components':[\
 		{\
