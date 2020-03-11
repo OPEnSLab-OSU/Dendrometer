@@ -17,4 +17,4 @@ The Dendrometer is an ongoing project that strives to enable ecological research
   - Integration with [Loom](https://github.com/OPEnSLab-OSU/Loom), which will allow this device to support plug-and-play functionalities with integrated sensors
   
 ## Setup Guide
-  - (On it's way! Project still in development)
+  - (On it's way! Project still in development, check updates on Lab Wiki for progress)
