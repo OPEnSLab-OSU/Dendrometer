@@ -35,5 +35,23 @@ uint32_t convertBits(uint32_t num) {
         newval |= (exists << (11 - i));
       }
       return newval;
+}
 
+uint32_t getSerialPosition(int CLK, int CS, int DO){
+  return convertBits(bitbang(CLK, CS, DO));
+}
+
+
+// Todo: Make more robust than just checking first two bits
+uint32_t computeElapsed(uint32_t curr, uint32_t &prevTwoSig, float elapsed) {
+  uint32_t currTwoSig = curr & 0xC00;
+  if((currTwoSig == 0xC00 && prevTwoSig == 0x0)) {
+    Serial.println("ROLLOVER UNDERFLOW");
+    elapsed -= 2.0;
+  } else if (prevTwoSig == 0xC00 && currTwoSig == 0x0) {
+    Serial.println("ROLLOVER OVERFLOW");
+    elapsed += 2.0;
+  }
+  prevTwoSig = currTwoSig;
+  return elapsed;
 }
