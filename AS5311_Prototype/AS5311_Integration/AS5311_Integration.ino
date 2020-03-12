@@ -95,7 +95,7 @@ void loop() {
 
     Loom.measure();
     Loom.package();
-    // Loom.display_data();
+    Loom.display_data();
     Loom.pause();
 
 
@@ -119,7 +119,16 @@ void loop() {
   Serial.println("Total distance: " + String(distance));
 
 
+// Cannot add two keys to same module 
+// TODO: Talk to Loom Developers about this
+  Loom.add_data("AS5311", "Serial Value", average);
+  Loom.add_data("Displacement", "Distance", distance);
 
+  JsonObject data_json = Loom.internal_json(false);
+  Serial.println("What will be logged to SD");
+  serializeJsonPretty(data_json, Serial);
+  
+  Loom.SDCARD().log();
 
 
   // ----------- GSHEETS -------------

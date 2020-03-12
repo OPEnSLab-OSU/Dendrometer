@@ -12,7 +12,7 @@
 		},\
 		{\
 			'name':'SD',\
-			'params':'default'\
+			'params':[true,1000,10,'dend',true]\
 		},\
 		{\
 			'name':'DS3231',\
