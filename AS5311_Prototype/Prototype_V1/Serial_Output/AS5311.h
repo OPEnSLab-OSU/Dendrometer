@@ -1,4 +1,4 @@
-
+// 56 milisecond delay
 // Returns the serial output from AS5331
 uint32_t bitbang(int CLK, int CS, int DO) {
   // write clock high to select the angular position data

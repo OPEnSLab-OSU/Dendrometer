@@ -43,7 +43,7 @@ uint32_t getSerialPosition(int CLK, int CS, int DO){
 
 
 // Todo: Make more robust than just checking first two bits
-uint32_t computeElapsed(uint32_t curr, uint32_t &prevTwoSig, float elapsed) {
+float computeElapsed(uint32_t curr, uint32_t &prevTwoSig, float elapsed) {
   uint32_t currTwoSig = curr & 0xC00;
   if((currTwoSig == 0xC00 && prevTwoSig == 0x0)) {
     Serial.println("ROLLOVER UNDERFLOW");
