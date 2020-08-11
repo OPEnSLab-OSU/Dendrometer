@@ -12,7 +12,7 @@ const char* config =
 #define CS 9
 #define CLK A5
 #define DO A4
-#define PULSE 11
+//#define PULSE 11
 
 #define RTC_INT_PIN 12
 
@@ -45,6 +45,9 @@ float prev = 0;
 
 void setup() 
 {
+
+  while(!Serial) {}  // Gives user time to put magnet in place before opening Serial Monitor
+
   // Needs to be done for Hypno Board
   pinMode(HYPNOS3, OUTPUT);
   digitalWrite(HYPNOS3, LOW); // Sets pin 5, the pin with the 3.3V rail, to output and enables the rail
@@ -61,15 +64,22 @@ void setup()
   // Pins to communicate with AS5311
   pinMode(CS, OUTPUT);
   pinMode(CLK, OUTPUT);
-  pinMode(DO, INPUT_PULLDOWN);
+  pinMode(DO, INPUT_PULLUP);
   digitalWrite(CS, HIGH);
   digitalWrite(CLK, LOW);
 
 	// Register an interrupt on the RTC alarm pin
 	Loom.InterruptManager().register_ISR(RTC_INT_PIN, wakeISR_RTC, LOW, ISR_Type::IMMEDIATE);
 
-  // Get starting Serial output (0-4095 value)
-  start = getSerialPosition(CLK, CS, DO);
+  delay(2000);
+
+  // Takes 16 measurements and averages them for the starting Serial value (0-4095 value)
+  for(int j = 0; j < 16; j++)
+  {
+    start += getSerialPosition(CLK, CS, DO);
+  }
+  start /= 16;
+  //  Serial.println("Start: " + String(start));
 
   // Save 2 most significant bits of start
   prevTwoSig = start & 0xC00;
@@ -102,16 +112,21 @@ void loop() {
     average += getSerialPosition(CLK, CS, DO);
   }
   average /= 16;
-  Serial.println("Average Serial Pos: " + String(average));
+  // Serial.println("Average Serial Pos: " + String(average));
 
 // Also updates prevTwoSig to two most significant bits of first param, is being passed by ref
   elapsed = computeElapsed(average, prevTwoSig, elapsed);
 
   // Computes total distance
   float distance = (elapsed + ((2.0 * ((int) average - (int) start))/4095.0));
-  Serial.println("Total distance: " + String(distance));
+  // Serial.println("Total distance: " + String(distance));
   float distanceMicro = (elapsed * 1000) + ((2000 * ((int) average - (int) start))/4095.0);
-  float difference = distance - prev;
+  float difference = 0;
+
+  // Reads the movement if any, else it sets the changed distance to 0
+  if (distance != prev) {
+    difference = distance - prev;
+  }
 
   // Cannot add two keys to same module 
   // TODO: Talk to Loom Developers about this
