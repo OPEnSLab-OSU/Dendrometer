@@ -13,8 +13,12 @@ uint32_t bitbang(int CLK, int CS, int DO) {
   for (uint8_t i = 0; i < 18; i++) {
     delay(1);
     digitalWrite(CLK, HIGH);
-    delay(1);
-    digitalWrite(CLK, LOW);
+
+    if (i < 17) {
+      delay(1);
+      digitalWrite(CLK, LOW);
+    }
+
     delay(1);
     auto readval = digitalRead(DO);
     if (readval == HIGH)

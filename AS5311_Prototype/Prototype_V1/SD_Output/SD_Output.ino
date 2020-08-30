@@ -1,4 +1,5 @@
-#define DELAY_IN_SECONDS 3
+#define DELAY_IN_SECONDS 0
+#define DELAY_IN_MINUTES 15
 
 #include "AS5311.h"
 #include "vector"
@@ -12,7 +13,6 @@ const char* config =
 #define CS 9
 #define CLK A5
 #define DO A4
-//#define PULSE 11
 
 #define RTC_INT_PIN 12
 
@@ -45,8 +45,6 @@ float prev = 0;
 
 void setup() 
 {
-
-  while(!Serial) {}  // Gives user time to put magnet in place before opening Serial Monitor
 
   // Needs to be done for Hypno Board
   pinMode(HYPNOS3, OUTPUT);
@@ -141,8 +139,8 @@ void loop() {
   prev = distance;
 
 	// set the RTC alarm to a specified duration, DELAY_IN_SECONDS, with TimeSpan
-	Loom.InterruptManager().RTC_alarm_duration(TimeSpan(0,0,0, DELAY_IN_SECONDS));
-	Loom.InterruptManager().reconnect_interrupt(RTC_INT_PIN);
+	Loom.InterruptManager().RTC_alarm_duration(TimeSpan(0,0, DELAY_IN_MINUTES, DELAY_IN_SECONDS)); 
+  Loom.InterruptManager().reconnect_interrupt(RTC_INT_PIN);
 
   Loom.power_down();
 
