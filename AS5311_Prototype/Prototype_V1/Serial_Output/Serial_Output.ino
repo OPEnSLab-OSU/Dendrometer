@@ -5,7 +5,6 @@
 #define CS 9
 #define CLK A5
 #define DO A4
-//#define PULSE 11
 
 #define HYPNOS3 5   // Hypnos 3V Rail
 #define HYPNOS5 6   // Hypnos 5V Rail
@@ -17,8 +16,6 @@ float prev = 0;
 int count = 0;
 
 void setup() {
-
-  while(!Serial) {} // Gives user time to put magnet in place before opening Serial Monitor
 
   pinMode(HYPNOS3, OUTPUT);
   digitalWrite(HYPNOS3, LOW); // Sets pin 5, the pin with the 3.3V rail, to output and enables the rail
@@ -41,7 +38,7 @@ void setup() {
   }
   start /= 16;
 
-  //  Serial.println("Start: " + String(start));
+  Serial.println("Start: " + String(start));
 
   // Save 2 most significant bits of start
   prevTwoSig = start & 0xC00;
@@ -66,14 +63,15 @@ void loop() {
   // 16 point average of Serial Position
   // 56ms * 16 = 896ms
 
-  int average = 0;   // Average of 16 measurements
-  // int remember = 0;  // Previous measured value
-  // int test = 0;      // Current measured value
+  uint32_t average = 0;   // Average of 16 measurements
+  int remember = 0;  // Previous measured value
+  int test = 0;      // Current measured value
 
   for(int j = 0; j < 16; j++)
   {
     average += getSerialPosition(CLK, CS, DO);
-/* // For troubleshooting
+    /*
+ // For troubleshooting
     if (remember == 0) {
       Serial.println("Difference: " + String(average));
     }
@@ -82,20 +80,21 @@ void loop() {
       Serial.println("Difference: " + String(test));
     }
     remember = average;
-*/
+  */
+
   }
 
   average /= 16;
-  // Serial.println("Average: " + String(average));
+  Serial.println("Average: " + String(average));
 
   // Also updates prevTwoSig to two most significant bits of first param, is being passed by ref
   // Verifies that reading is somewhat accurate
   elapsed = computeElapsed(average, prevTwoSig, elapsed);
-  // Serial.println("Elapsed: " + String(elapsed));
+//  Serial.println("Elapsed: " + String(elapsed));
 
   // Computes total distance
-  float distance = (elapsed + ((2.0 * ((int) average - (int) start))/4095.0));               // Distance in millimeters
-  float distanceMicro = (elapsed * 1000) + ((2000 * ((int) average - (int) start))/4095.0);  // Distance in micrometers
+  float distance = (elapsed + ((2.0 * ((int) average - (int) start))/4096.0));               // Distance in millimeters
+  float distanceMicro = (elapsed * 1000) + ((2000 * ((int) average - (int) start))/4096.0);  // Distance in micrometers
   float difference = 0;                                                                      // Millimeters since last measurement
 
   // Reads the movement if any, else it sets the changed distance to 0

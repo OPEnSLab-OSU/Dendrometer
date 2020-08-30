@@ -13,15 +13,28 @@ uint32_t bitbang(int CLK, int CS, int DO) {
   for (uint8_t i = 0; i < 18; i++) {
     delay(1);
     digitalWrite(CLK, HIGH);
+
+    if (i < 17) {
+      delay(1);
+      digitalWrite(CLK, LOW);
+    }
+
     delay(1);
-    digitalWrite(CLK, LOW);
-    delay(1);
-    auto readval = digitalRead(DO);
-    if (readval == HIGH)
-      value |= (1U << i);
+    auto readval = digitalRead(DO); 
+    // For troubleshooting (Prints the bits and its order)
+    if (readval == HIGH) {
+      value |= (1U << i);  
+      //Serial.print("1");
+    }
+    else {
+      //Serial.print("0");
+    }
   }
+  Serial.print("\n");
   digitalWrite(CS, HIGH);
+
   return value;
+
 }
 
 // Isolates the bottom 12 bits position value to decimal
@@ -34,7 +47,7 @@ uint32_t convertBits(uint32_t num) {
         uint32_t exists = (readval & (1 << i)) ? 1 : 0;
         newval |= (exists << (11 - i));
       }
-      return newval;
+    return newval;
 }
 
 uint32_t getSerialPosition(int CLK, int CS, int DO){
