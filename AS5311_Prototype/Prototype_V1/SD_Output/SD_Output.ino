@@ -1,5 +1,5 @@
-#define DELAY_IN_SECONDS 0
-#define DELAY_IN_MINUTES 15
+#define DELAY_IN_SECONDS 3 
+#define DELAY_IN_MINUTES 0
 
 #include "AS5311.h"
 #include "vector"
@@ -42,6 +42,7 @@ uint32_t start = 0;
 uint32_t prevTwoSig = 0;
 float elapsed = 0;
 float prev = 0;
+float prevMicro = 0;
 
 void setup() 
 {
@@ -112,19 +113,23 @@ void loop() {
   average /= 16;
   // Serial.println("Average Serial Pos: " + String(average));
 
+  uint32_t errorBits = getErrorBits(CLK, CS, DO);
+
 // Also updates prevTwoSig to two most significant bits of first param, is being passed by ref
   elapsed = computeElapsed(average, prevTwoSig, elapsed);
 
-  // Computes total distance
+  // Computes total distance in mm and um
   float distance = (elapsed + ((2.0 * ((int) average - (int) start))/4095.0));
-  // Serial.println("Total distance: " + String(distance));
   float distanceMicro = (elapsed * 1000) + ((2000 * ((int) average - (int) start))/4095.0);
   float difference = 0;
+  float differenceMicro = 0;
 
   // Reads the movement if any, else it sets the changed distance to 0
-  if (distance != prev) {
+  if (distance != prev)
     difference = distance - prev;
-  }
+
+  if (distanceMicro != prevMicro)
+    differenceMicro = distanceMicro - prevMicro;
 
   // Cannot add two keys to same module 
   // TODO: Talk to Loom Developers about this
@@ -132,11 +137,29 @@ void loop() {
   Loom.add_data("Displacement (mm)", "mm", distance);
   Loom.add_data("Displacement (um)", "um", distanceMicro);
   Loom.add_data("Difference (mm)", "mm", difference);
+  Loom.add_data("Difference (um)", "um", differenceMicro);
+
+  // Logs the status of the magnet position (whether the data is good or not) {Green = Good readings, Red = Bad readings}
+  // "Error" occurs when something other than magnet placement causes a problem
+  // Ignores the parity bit (last bit)
+  if (errorBits >= 16 && errorBits <= 18) { // Error bits: 10000, 10001, 10010
+    Loom.add_data("Status", "Color", "Green");
+  }
+  else if (errorBits == 19) {               // Error bits: 10011
+    Loom.add_data("Status", "Color", "Yellow");
+  }
+  else if (errorBits == 23) {               // Error bits: 10111
+    Loom.add_data("Status", "Color", "Red");
+  }
+  else {
+    Loom.add_data("Status", "Color", "Error");
+  }
 
   JsonObject data_json = Loom.internal_json(false);
 
   Loom.SDCARD().log();
   prev = distance;
+  prevMicro = distanceMicro;
 
 	// set the RTC alarm to a specified duration, DELAY_IN_SECONDS, with TimeSpan
 	Loom.InterruptManager().RTC_alarm_duration(TimeSpan(0,0, DELAY_IN_MINUTES, DELAY_IN_SECONDS)); 

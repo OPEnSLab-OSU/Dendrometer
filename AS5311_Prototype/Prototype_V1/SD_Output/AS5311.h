@@ -45,6 +45,22 @@ uint32_t getSerialPosition(int CLK, int CS, int DO){
   return convertBits(bitbang(CLK, CS, DO));
 }
 
+// Checks error bits 
+uint32_t bitCheck(uint32_t num) {
+      uint32_t readval = num & 0x3FFFF; // Saves entire value; not sure if there's a better way to do this
+      uint32_t newval = 0;
+    // Flips bits order
+      for (int i = 16; i >= 12; i--) 
+      {
+        uint32_t exists = (readval & (1 << i)) ? 1 : 0;
+        newval |= (exists << (16 - i));
+      }
+      return newval;
+}
+
+uint32_t getErrorBits(int CLK, int CS, int DO){
+  return bitCheck(bitbang(CLK, CS, DO));
+}
 
 // Todo: Make more robust than just checking first two bits
 float computeElapsed(uint32_t curr, uint32_t &prevTwoSig, float elapsed) {
