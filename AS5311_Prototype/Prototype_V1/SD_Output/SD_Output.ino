@@ -1,5 +1,5 @@
-#define DELAY_IN_SECONDS 3 
-#define DELAY_IN_MINUTES 0
+#define DELAY_IN_SECONDS 0
+#define DELAY_IN_MINUTES 15
 
 #include "AS5311.h"
 #include "vector"
