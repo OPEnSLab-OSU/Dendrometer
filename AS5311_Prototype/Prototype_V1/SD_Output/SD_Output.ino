@@ -67,10 +67,29 @@ void setup()
   digitalWrite(CS, HIGH);
   digitalWrite(CLK, LOW);
 
-	// Register an interrupt on the RTC alarm pin
-	Loom.InterruptManager().register_ISR(RTC_INT_PIN, wakeISR_RTC, LOW, ISR_Type::IMMEDIATE);
+  Loom.begin_LED();                     // Indicator for users to see if magnet is in good position
+  digitalWrite(LED_BUILTIN, LOW);
+
+  // LED indicator, TODO: Change to Neopixel LED
+  uint32_t ledCheck = getErrorBits(CLK, CS, DO);                                           // Tracking magnet position for indicator
+
+  while(ledCheck < 16 || ledCheck > 18) {
+
+    if (ledCheck >= 16 && ledCheck <= 18) { // Error bits: 10000, 10001, 10010
+      digitalWrite(LED_BUILTIN, LOW);
+      break;
+    }
+   
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(3000);                                                                           // Gives user 3 seconds to adjust magnet before next reading
+    ledCheck = getErrorBits(CLK, CS, DO);
+
+  }
 
   delay(2000);
+
+	// Register an interrupt on the RTC alarm pin
+	Loom.InterruptManager().register_ISR(RTC_INT_PIN, wakeISR_RTC, LOW, ISR_Type::IMMEDIATE);
 
   // Takes 16 measurements and averages them for the starting Serial value (0-4095 value)
   for(int j = 0; j < 16; j++)
