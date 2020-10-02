@@ -34,6 +34,33 @@ void setup() {
 
   delay(2000);
 
+  // LED indicator
+  uint32_t ledCheck = getErrorBits(CLK, CS, DO);                                           // Tracking magnet position for indicator
+  
+  while(ledCheck < 16 || ledCheck > 18) {
+
+    if (ledCheck >= 16 && ledCheck <= 18) { // Error bits: 10000, 10001, 10010
+      Serial.println("Status: Green");
+    }
+    else if (ledCheck == 19) {               // Error bits: 10011
+      Serial.println("Status: Yellow");
+   }
+   else if (ledCheck == 23) {               // Error bits: 10111
+     Serial.println("Status: Red");
+   }
+   else {
+     Serial.println("Status: Error (You should not see this)");
+   }
+
+    Serial.println("Magnet is not in a good position. Please try again.");
+    delay(3000);                                                                           // Gives user 3 seconds to adjust magnet before next reading
+
+    ledCheck = getErrorBits(CLK, CS, DO);
+
+  }
+
+  digitalWrite(HYPNOS3, HIGH);
+
   // Takes 16 measurements and averages them for the starting Serial value (0-4095 value)
   for(int j = 0; j < 16; j++)
   {
