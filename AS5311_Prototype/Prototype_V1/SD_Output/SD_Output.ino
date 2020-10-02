@@ -86,8 +86,6 @@ void setup()
 
   }
 
-  delay(2000);
-
 	// Register an interrupt on the RTC alarm pin
 	Loom.InterruptManager().register_ISR(RTC_INT_PIN, wakeISR_RTC, LOW, ISR_Type::IMMEDIATE);
 
@@ -109,9 +107,16 @@ void loop() {
 
   digitalWrite(HYPNOS3, LOW); // Turn on 3.3V rail
   digitalWrite(HYPNOS5, HIGH);  // Turn on 5V rail
+
+  // Protocol to turn on SD
   pinMode(10, OUTPUT);
   pinMode(23, OUTPUT);
   pinMode(24, OUTPUT);
+
+  // Protocol to turn on AS5311
+  pinMode(CS, OUTPUT);
+  pinMode(CLK, OUTPUT);
+  pinMode(DO, INPUT_PULLUP);
 
   Serial.println("IN LOOP");
 
@@ -180,7 +185,7 @@ void loop() {
   prev = distance;
   prevMicro = distanceMicro;
 
-	// set the RTC alarm to a specified duration, DELAY_IN_SECONDS, with TimeSpan
+	// set the RTC alarm to a specified duration, DELAY_IN_MINUTES and DELAY_IN_SECONDS, with TimeSpan
 	Loom.InterruptManager().RTC_alarm_duration(TimeSpan(0,0, DELAY_IN_MINUTES, DELAY_IN_SECONDS)); 
   Loom.InterruptManager().reconnect_interrupt(RTC_INT_PIN);
 
@@ -188,9 +193,16 @@ void loop() {
 
   digitalWrite(HYPNOS3, HIGH); // Power down 3.3V rail
 	digitalWrite(HYPNOS5, LOW);  // Power down 5V rail
-  pinMode(23, INPUT);
+
+  // Protocol to shut down SD
+  pinMode(23, INPUT);          
   pinMode(24, INPUT);
   pinMode(10, INPUT);
+  
+  // Protocol to shut down AS5311
+  pinMode(CLK, INPUT);         
+  pinMode(DO, INPUT);
+  pinMode(CS, INPUT);
 
 	Loom.SleepManager().sleep();
 
