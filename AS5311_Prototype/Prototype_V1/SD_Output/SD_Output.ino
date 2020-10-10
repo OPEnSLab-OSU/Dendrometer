@@ -6,7 +6,7 @@
 #include <Loom.h>
 #include <stdint.h>
 
-const char* config = 
+const char *config =
 #include "loomconfig.h"
 ;
 
@@ -16,25 +16,33 @@ const char* config =
 
 #define RTC_INT_PIN 12
 
-#define HYPNOS3 5     // Hypnos 3V rail
-#define HYPNOS5 6     // Hypnos 5V rail
+#define HYPNOS3 5 // Hypnos 3V rail
+#define HYPNOS5 6 // Hypnos 5V rail
+
+/*
+
+Ideas:
+Print out error bit value as well as the color
+Think about how to evaluate distance changes as % (???)
+
+*/
 
 LoomFactory<
-	Enable::Internet::Disabled,
-	Enable::Sensors::Enabled,
-	Enable::Radios::Disabled,
-	Enable::Actuators::Disabled,
-	Enable::Max::Disabled
-> ModuleFactory{};
+    Enable::Internet::Disabled,
+    Enable::Sensors::Enabled,
+    Enable::Radios::Disabled,
+    Enable::Actuators::Enabled,
+    Enable::Max::Disabled>
+    ModuleFactory{};
 
-LoomManager Loom{ &ModuleFactory };
+LoomManager Loom{&ModuleFactory};
 
 void wakeISR_RTC()
 {
-    Serial.println("IN ISR");
-    detachInterrupt(RTC_INT_PIN);
-    digitalWrite(CS, HIGH);
-    digitalWrite(CLK, LOW);
+  Serial.println("IN ISR");
+  detachInterrupt(RTC_INT_PIN);
+  digitalWrite(CS, HIGH);
+  digitalWrite(CLK, LOW);
 }
 
 // Variables to track overall displacement
@@ -44,8 +52,7 @@ float elapsed = 0;
 float prev = 0;
 float prevMicro = 0;
 
-void setup() 
-{
+void setup() {
 
   // Needs to be done for Hypno Board
   pinMode(HYPNOS3, OUTPUT);
@@ -53,7 +60,7 @@ void setup()
   pinMode(HYPNOS5, OUTPUT);
   digitalWrite(HYPNOS5, HIGH); // Sets pin 6, the pin with the 5V rail, to output and enables the rail
 
-  pinMode(RTC_INT_PIN, INPUT_PULLUP);		// Enable waiting for RTC interrupt, MUST use a pullup since signal is active low
+  pinMode(RTC_INT_PIN, INPUT_PULLUP); // Enable waiting for RTC interrupt, MUST use a pullup since signal is active low
 
   //Setup for Loom Factory
   Loom.begin_serial(true);
@@ -67,31 +74,31 @@ void setup()
   digitalWrite(CS, HIGH);
   digitalWrite(CLK, LOW);
 
-  Loom.begin_LED();                     // Indicator for users to see if magnet is in good position
-  digitalWrite(LED_BUILTIN, LOW);
+  // LED indicator
+  uint32_t ledCheck = getErrorBits(CLK, CS, DO); // Tracking magnet position for indicator
 
-  // LED indicator, TODO: Change to Neopixel LED
-  uint32_t ledCheck = getErrorBits(CLK, CS, DO);                                           // Tracking magnet position for indicator
-
-  while(ledCheck < 16 || ledCheck > 18) {
+  while (ledCheck < 16 || ledCheck > 18) {
 
     if (ledCheck >= 16 && ledCheck <= 18) { // Error bits: 10000, 10001, 10010
-      digitalWrite(LED_BUILTIN, LOW);
+      Loom.Neopixel().set_color(2, 0, 0, 200, 0);
       break;
     }
-   
-    digitalWrite(LED_BUILTIN, HIGH);
-    delay(3000);                                                                           // Gives user 3 seconds to adjust magnet before next reading
-    ledCheck = getErrorBits(CLK, CS, DO);
+    else if (ledCheck == 19)                // Error bits: 10011
+      Loom.Neopixel().set_color(2, 0, 200, 200, 0);
+    else if (ledCheck == 23)                // Error bits: 10111
+      Loom.Neopixel().set_color(2, 0, 200, 0, 0);
 
+
+    delay(3000); // Gives user 3 seconds to adjust magnet before next reading
+    ledCheck = getErrorBits(CLK, CS, DO);
   }
 
-	// Register an interrupt on the RTC alarm pin
-	Loom.InterruptManager().register_ISR(RTC_INT_PIN, wakeISR_RTC, LOW, ISR_Type::IMMEDIATE);
+
+  // Register an interrupt on the RTC alarm pin
+  Loom.InterruptManager().register_ISR(RTC_INT_PIN, wakeISR_RTC, LOW, ISR_Type::IMMEDIATE);
 
   // Takes 16 measurements and averages them for the starting Serial value (0-4095 value)
-  for(int j = 0; j < 16; j++)
-  {
+  for (int j = 0; j < 16; j++) {
     start += getSerialPosition(CLK, CS, DO);
   }
   start /= 16;
@@ -100,13 +107,13 @@ void setup()
   // Save 2 most significant bits of start
   prevTwoSig = start & 0xC00;
 
+  Loom.Neopixel().set_color(2, 0, 0, 0, 0); // Turns off Neopixel
 }
-
 
 void loop() {
 
-  digitalWrite(HYPNOS3, LOW); // Turn on 3.3V rail
-  digitalWrite(HYPNOS5, HIGH);  // Turn on 5V rail
+  digitalWrite(HYPNOS3, LOW);  // Turn on 3.3V rail
+  digitalWrite(HYPNOS5, HIGH); // Turn on 5V rail
 
   // Protocol to turn on SD
   pinMode(10, OUTPUT);
@@ -125,13 +132,12 @@ void loop() {
   Serial.println("After powerup");
 
   Loom.measure();
-  Loom.package();      
-  Loom.display_data(); 
+  Loom.package();
+  Loom.display_data();
 
   // 16 point average of Serial Position
   int average = 0;
-  for(int j = 0; j < 16; j++)
-  {
+  for (int j = 0; j < 16; j++) {
     average += getSerialPosition(CLK, CS, DO);
   }
   average /= 16;
@@ -139,12 +145,12 @@ void loop() {
 
   uint32_t errorBits = getErrorBits(CLK, CS, DO);
 
-// Also updates prevTwoSig to two most significant bits of first param, is being passed by ref
+  // Also updates prevTwoSig to two most significant bits of first param, is being passed by ref
   elapsed = computeElapsed(average, prevTwoSig, elapsed);
 
   // Computes total distance in mm and um
-  float distance = (elapsed + ((2.0 * ((int) average - (int) start))/4095.0));
-  float distanceMicro = (elapsed * 1000) + ((2000 * ((int) average - (int) start))/4095.0);
+  float distance = (elapsed + ((2.0 * ((int)average - (int)start)) / 4095.0));
+  float distanceMicro = (elapsed * 1000) + ((2000 * ((int)average - (int)start)) / 4095.0);
   float difference = 0;
   float differenceMicro = 0;
 
@@ -155,7 +161,7 @@ void loop() {
   if (distanceMicro != prevMicro)
     differenceMicro = distanceMicro - prevMicro;
 
-  // Cannot add two keys to same module 
+  // Cannot add two keys to same module
   // TODO: Talk to Loom Developers about this
   Loom.add_data("AS5311", "Serial Value", average);
   Loom.add_data("Displacement (mm)", "mm", distance);
@@ -166,18 +172,18 @@ void loop() {
   // Logs the status of the magnet position (whether the data is good or not) {Green = Good readings, Red = Bad readings}
   // "Error" occurs when something other than magnet placement causes a problem
   // Ignores the parity bit (last bit)
-  if (errorBits >= 16 && errorBits <= 18) { // Error bits: 10000, 10001, 10010
+  if (errorBits >= 16 && errorBits <= 18) // Error bits: 10000, 10001, 10010
     Loom.add_data("Status", "Color", "Green");
-  }
-  else if (errorBits == 19) {               // Error bits: 10011
+  else if (errorBits == 19) // Error bits: 10011
     Loom.add_data("Status", "Color", "Yellow");
-  }
-  else if (errorBits == 23) {               // Error bits: 10111
+  else if (errorBits == 23) // Error bits: 10111
     Loom.add_data("Status", "Color", "Red");
-  }
-  else {
-    Loom.add_data("Status", "Color", "Error");
-  }
+  else if (errorBits < 16)                 // OCF Bit is 0
+    Loom.add_data("Status", "Color", "OCF Error");
+  else if (errorBits > 24)                 // COF Bit is 1
+    Loom.add_data("Status", "Color", "COF Error");
+  else
+    Loom.add_data("Status", "Color", "Other Error");
 
   JsonObject data_json = Loom.internal_json(false);
 
@@ -185,25 +191,24 @@ void loop() {
   prev = distance;
   prevMicro = distanceMicro;
 
-	// set the RTC alarm to a specified duration, DELAY_IN_MINUTES and DELAY_IN_SECONDS, with TimeSpan
-	Loom.InterruptManager().RTC_alarm_duration(TimeSpan(0,0, DELAY_IN_MINUTES, DELAY_IN_SECONDS)); 
+  // set the RTC alarm to a specified duration, DELAY_IN_MINUTES and DELAY_IN_SECONDS, with TimeSpan
+  Loom.InterruptManager().RTC_alarm_duration(TimeSpan(0, 0, DELAY_IN_MINUTES, DELAY_IN_SECONDS));
   Loom.InterruptManager().reconnect_interrupt(RTC_INT_PIN);
 
   Loom.power_down();
 
   digitalWrite(HYPNOS3, HIGH); // Power down 3.3V rail
-	digitalWrite(HYPNOS5, LOW);  // Power down 5V rail
+  digitalWrite(HYPNOS5, LOW);  // Power down 5V rail
 
   // Protocol to shut down SD
-  pinMode(23, INPUT);          
+  pinMode(23, INPUT);
   pinMode(24, INPUT);
   pinMode(10, INPUT);
-  
+
   // Protocol to shut down AS5311
-  pinMode(CLK, INPUT);         
+  pinMode(CLK, INPUT);
   pinMode(DO, INPUT);
   pinMode(CS, INPUT);
 
-	Loom.SleepManager().sleep();
-
+  Loom.SleepManager().sleep();
 }
