@@ -149,18 +149,18 @@ void loop() {
   // Prints the status of the magnet position (whether the data is good or not) {Green = Good readings, Red = Bad readings}
   // "Error" occurs when something other than magnet placement causes a problem
   // Ignores the parity bit (last bit)
-  if (errorBits >= 16 && errorBits <= 18) { // Error bits: 10000, 10001, 10010
+  if (errorBits >= 16 && errorBits <= 18)  // Error bits: 10000, 10001, 10010
     Serial.println("Status: Green");
-  }
-  else if (errorBits == 19) {               // Error bits: 10011
+  else if (errorBits == 19)                // Error bits: 10011
     Serial.println("Status: Yellow");
-  }
-  else if (errorBits == 23) {               // Error bits: 10111
+  else if (errorBits == 23)                // Error bits: 10111
     Serial.println("Status: Red");
-  }
-  else {
+  else if (errorBits < 16)                 // OCF Bit is 0
+    Serial.println("Status: OCF Bit Error");
+  else if (errorBits > 24)                 // COF Bit is 1
+    Serial.println("Status: COF Bit Error");
+  else
     Serial.println("Status: Error (You should not see this)");
-  }
 
   Serial.println("=============== " + String(count) + " ===============");
 
