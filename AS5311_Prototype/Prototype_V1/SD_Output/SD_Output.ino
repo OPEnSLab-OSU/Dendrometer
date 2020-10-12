@@ -24,6 +24,7 @@ const char *config =
 Ideas:
 Print out error bit value as well as the color
 Think about how to evaluate distance changes as % (???)
+Add analog to config to log battery levels
 
 */
 
@@ -74,25 +75,31 @@ void setup() {
   digitalWrite(CS, HIGH);
   digitalWrite(CLK, LOW);
 
+  delay(20);                                        // Warm up time for AS5311
+
   // LED indicator
-  uint32_t ledCheck = getErrorBits(CLK, CS, DO); // Tracking magnet position for indicator
+  uint32_t ledCheck = getErrorBits(CLK, CS, DO);    // Tracking magnet position for indicator
 
   while (ledCheck < 16 || ledCheck > 18) {
 
-    if (ledCheck >= 16 && ledCheck <= 18) { // Error bits: 10000, 10001, 10010
-      Loom.Neopixel().set_color(2, 0, 0, 200, 0);
-      break;
-    }
-    else if (ledCheck == 19)                // Error bits: 10011
-      Loom.Neopixel().set_color(2, 0, 200, 200, 0);
-    else if (ledCheck == 23)                // Error bits: 10111
-      Loom.Neopixel().set_color(2, 0, 200, 0, 0);
-
+    if (ledCheck == 19)
+      Loom.Neopixel().set_color(2, 0, 200, 200, 0); // Changes Neopixel to yellow
+    else
+      Loom.Neopixel().set_color(2, 0, 200, 0, 0);   // Changes Neopixel to red
 
     delay(3000); // Gives user 3 seconds to adjust magnet before next reading
     ledCheck = getErrorBits(CLK, CS, DO);
   }
 
+  // Green light flashes 3 times to indicate the magnet is setup well
+  for (int i = 0; i < 3; i++) {
+
+    Loom.Neopixel().set_color(2, 0, 0, 200, 0);   // Changes Neopixel to green 
+    delay(2000);
+
+    Loom.Neopixel().set_color(2, 0, 0, 0, 0);     // Turns off Neopixel
+    delay(2000);
+  }
 
   // Register an interrupt on the RTC alarm pin
   Loom.InterruptManager().register_ISR(RTC_INT_PIN, wakeISR_RTC, LOW, ISR_Type::IMMEDIATE);
@@ -124,6 +131,8 @@ void loop() {
   pinMode(CS, OUTPUT);
   pinMode(CLK, OUTPUT);
   pinMode(DO, INPUT_PULLUP);
+
+  delay(20);                    // Warm up time for AS5311
 
   Serial.println("IN LOOP");
 
@@ -170,7 +179,6 @@ void loop() {
   Loom.add_data("Difference (um)", "um", differenceMicro);
 
   // Logs the status of the magnet position (whether the data is good or not) {Green = Good readings, Red = Bad readings}
-  // "Error" occurs when something other than magnet placement causes a problem
   // Ignores the parity bit (last bit)
   if (errorBits >= 16 && errorBits <= 18) // Error bits: 10000, 10001, 10010
     Loom.add_data("Status", "Color", "Green");
@@ -178,9 +186,9 @@ void loop() {
     Loom.add_data("Status", "Color", "Yellow");
   else if (errorBits == 23) // Error bits: 10111
     Loom.add_data("Status", "Color", "Red");
-  else if (errorBits < 16)                 // OCF Bit is 0
+  else if (errorBits < 16)                 // If OCF Bit is 0
     Loom.add_data("Status", "Color", "OCF Error");
-  else if (errorBits > 24)                 // COF Bit is 1
+  else if (errorBits > 24)                 // If COF Bit is 1
     Loom.add_data("Status", "Color", "COF Error");
   else
     Loom.add_data("Status", "Color", "Other Error");
