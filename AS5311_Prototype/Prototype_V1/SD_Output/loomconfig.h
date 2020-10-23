@@ -25,6 +25,10 @@
         {\
         	'name':'Sleep_Manager',\
         	'params':[true,false,1]\
+        },\
+        {\
+        	'name':'Neopixel',\
+        	'params':'default'\
         }\
 	]\
 }"
