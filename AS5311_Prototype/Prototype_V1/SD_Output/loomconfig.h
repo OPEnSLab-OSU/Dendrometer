@@ -7,6 +7,10 @@
 	},\
 	'components':[\
 		{\
+			'name':'Analog',\
+			'params':'default'\
+		},\
+		{\
 			'name':'SHT31D',\
 			'params':'default'\
 		},\
