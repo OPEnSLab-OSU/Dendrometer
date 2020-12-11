@@ -95,10 +95,10 @@ void setup() {
   for (int i = 0; i < 3; i++) {
 
     Loom.Neopixel().set_color(2, 0, 0, 200, 0);   // Changes Neopixel to green 
-    delay(2000);
+    delay(500);
 
     Loom.Neopixel().set_color(2, 0, 0, 0, 0);     // Turns off Neopixel
-    delay(2000);
+    delay(500);
   }
 
   // Register an interrupt on the RTC alarm pin
