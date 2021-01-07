@@ -14,17 +14,19 @@ const char *config =
 #define CLK A5
 #define DO A4
 
+#define INT_BUT 11
 #define RTC_INT_PIN 12
 
 #define HYPNOS3 5 // Hypnos 3V rail
 #define HYPNOS5 6 // Hypnos 5V rail
+
+volatile bool flag = false;
 
 /*
 
 Ideas:
 Print out error bit value as well as the color
 Think about how to evaluate distance changes as % (???)
-Add analog to config to log battery levels
 
 */
 
@@ -38,12 +40,20 @@ LoomFactory<
 
 LoomManager Loom{&ModuleFactory};
 
-void wakeISR_RTC()
-{
-  Serial.println("IN ISR");
+void ISR_pin12(){
   detachInterrupt(RTC_INT_PIN);
+  LPrintln("Pin 12 triggered");
   digitalWrite(CS, HIGH);
   digitalWrite(CLK, LOW);
+  flag = true;
+}
+
+void ISR_pin11(){
+  detachInterrupt(INT_BUT);
+  LPrintln("Pin 11 triggered");
+  digitalWrite(CS, HIGH);
+  digitalWrite(CLK, LOW);
+  flag = true;
 }
 
 // Variables to track overall displacement
@@ -62,6 +72,7 @@ void setup() {
   digitalWrite(HYPNOS5, HIGH); // Sets pin 6, the pin with the 5V rail, to output and enables the rail
 
   pinMode(RTC_INT_PIN, INPUT_PULLUP); // Enable waiting for RTC interrupt, MUST use a pullup since signal is active low
+  pinMode(INT_BUT, INPUT_PULLUP);
 
   //Setup for Loom Factory
   Loom.begin_serial(true);
@@ -102,7 +113,8 @@ void setup() {
   }
 
   // Register an interrupt on the RTC alarm pin
-  Loom.InterruptManager().register_ISR(RTC_INT_PIN, wakeISR_RTC, LOW, ISR_Type::IMMEDIATE);
+  Loom.InterruptManager().register_ISR(RTC_INT_PIN, ISR_pin12, LOW, ISR_Type::IMMEDIATE);
+  Loom.InterruptManager().register_ISR(INT_BUT, ISR_pin11, LOW, ISR_Type::IMMEDIATE);
 
   // Takes 16 measurements and averages them for the starting Serial value (0-4095 value)
   for (int j = 0; j < 16; j++) {
@@ -137,13 +149,14 @@ void loop() {
   Serial.println("IN LOOP");
 
   Loom.power_up();
+  flag = false;
 
   Serial.println("After powerup");
 
   Loom.measure();
   Loom.package();
   Loom.display_data();
-
+  
   // 16 point average of Serial Position
   int average = 0;
   for (int j = 0; j < 16; j++) {
@@ -202,6 +215,7 @@ void loop() {
   // set the RTC alarm to a specified duration, DELAY_IN_MINUTES and DELAY_IN_SECONDS, with TimeSpan
   Loom.InterruptManager().RTC_alarm_duration(TimeSpan(0, 0, DELAY_IN_MINUTES, DELAY_IN_SECONDS));
   Loom.InterruptManager().reconnect_interrupt(RTC_INT_PIN);
+  Loom.InterruptManager().reconnect_interrupt(INT_BUT);
 
   Loom.power_down();
 
@@ -218,5 +232,5 @@ void loop() {
   pinMode(DO, INPUT);
   pinMode(CS, INPUT);
 
-  Loom.SleepManager().sleep();
+  while(!flag) Loom.SleepManager().sleep();
 }
