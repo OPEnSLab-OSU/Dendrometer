@@ -1,0 +1,41 @@
+{
+    "description": "<p>The dendrometer created at the OPEnS Lab - tailored for grapevines - alleviates key failure points in other designs by using zero-thermal expansion carbon fiber, spring tension, and a linear magnetic encoder. </p>", 
+    "license": "gpl-3.0", 
+    "title": "High Precision, Low-Cost Dendrometer for Evaluating Water Stress Using Magnetic Sensing of Diurnal Stem Fluctuations of Grapevines", 
+    "creators": [
+        {	
+		      	"affiliation": "Openly Published Environmental Sensing (OPEnS) Lab, Oregon State University",
+            "name": "Cameron Clonch"
+        }, 
+        {
+            "affiliation": "Openly Published Environmental Sensing (OPEnS) Lab, Oregon State University", 
+            "name": "Mark Huynh"
+        }, 
+        {
+            "affiliation": "Openly Published Environmental Sensing (OPEnS) Lab, Oregon State University", 
+            "name": "Bryson Goto"
+        }, 
+        {
+            "affiliation": "Department of Horticulture, Southern Oregon Research and Extension Center, Oregon State University", 
+            "name": "Alexander Levin"
+        }, 
+        {
+            "affiliation": "Openly Published Environmental Sensing (OPEnS) Lab, Department of Biological and Ecological Engineering, Oregon State University", 
+            "name": "John Selker"
+        }, 
+        {
+            "affiliation": "Openly Published Environmental Sensing (OPEnS) Lab, Department of Biological and Ecological Engineering, Oregon State University", 
+            "name": "Chet Udell"
+        }
+    ],
+	  "keywords": [
+      "Vineyard",
+      "Woody Plants",
+      "Arduino",
+      "Carbon Fiber",
+      "Irrigation",
+      "Water-stress indicator",
+      "Maximum daily shrinkage (MDS)",
+      "Trunk growth rate"
+	  ]
+}
