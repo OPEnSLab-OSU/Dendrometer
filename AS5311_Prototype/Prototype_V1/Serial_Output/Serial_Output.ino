@@ -94,36 +94,20 @@ void loop() {
   // 56ms * 16 = 896ms
 
   uint32_t average = 0;   // Average of 16 measurements
-//  int remember = 0;  // Previous measured value
-//  int test = 0;      // Current measured value
 
   for(int j = 0; j < 16; j++)
   {
     average += getSerialPosition(CLK, CS, DO);
-    /*
- // For troubleshooting
-    if (remember == 0) {
-      Serial.println("Difference: " + String(average));
-    }
-    else {
-      test = average - remember;
-      Serial.println("Difference: " + String(test));
-    }
-    remember = average;
-  */
-
   }
 
   average /= 16;
   Serial.println("Average: " + String(average));
 
   uint32_t errorBits = getErrorBits(CLK, CS, DO);                                           // Tracking error bits
-//  Serial.println("Error Bit Value: " + String(errorBits));
 
   // Also updates prevTwoSig to two most significant bits of first param, is being passed by ref
   // Verifies that reading is somewhat accurate
   elapsed = computeElapsed(average, prevTwoSig, elapsed);
-//  Serial.println("Elapsed: " + String(elapsed));
 
   // Computes total distance
   float distance = (elapsed + ((2.0 * ((int) average - (int) start))/4096.0));               // Distance in millimeters
