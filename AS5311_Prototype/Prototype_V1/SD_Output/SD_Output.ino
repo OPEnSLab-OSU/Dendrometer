@@ -21,6 +21,7 @@ const char *config =
 #define HYPNOS5 6 // Hypnos 5V rail
 
 volatile bool flag = false;
+volatile bool button = false;
 
 /*
 
@@ -54,6 +55,7 @@ void ISR_pin11(){
   digitalWrite(CS, HIGH);
   digitalWrite(CLK, LOW);
   flag = true;
+  button = true;
 }
 
 // Variables to track overall displacement
@@ -149,7 +151,23 @@ void loop() {
   Serial.println("IN LOOP");
 
   Loom.power_up();
+
+  if (button) {
+    uint32_t ledCheck = getErrorBits(CLK, CS, DO);
+
+    if (ledCheck >= 16 && ledCheck <= 18)
+      Loom.Neopixel().set_color(2, 0, 0, 200, 0);
+    else if (ledCheck == 19)
+      Loom.Neopixel().set_color(2, 0, 200, 200, 0);
+    else
+      Loom.Neopixel().set_color(2, 0, 200, 0, 0);
+
+    delay(3000);
+    Loom.Neopixel().set_color(2, 0, 0, 0, 0);
+  }
+  
   flag = false;
+  button = false;
 
   Serial.println("After powerup");
 
