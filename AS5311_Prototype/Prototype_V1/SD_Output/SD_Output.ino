@@ -84,7 +84,7 @@ void setup() {
   pinMode(LED, OUTPUT);
 
   delay(20);                                        // Warm up time for AS5311
-/*
+
   // LED indicator
   uint32_t ledCheck = getErrorBits(CLK, CS, DO);    // Tracking magnet position for indicator
 
@@ -98,7 +98,7 @@ void setup() {
     delay(3000); // Gives user 3 seconds to adjust magnet before next reading
     ledCheck = getErrorBits(CLK, CS, DO);
   }
-*/
+
   // Green light flashes 3 times to indicate the magnet is setup well
   for (int i = 0; i < 3; i++) {
 
