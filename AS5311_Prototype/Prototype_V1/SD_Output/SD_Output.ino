@@ -1,5 +1,5 @@
-#define DELAY_IN_SECONDS 0
-#define DELAY_IN_MINUTES 15
+#define DELAY_IN_SECONDS 15
+#define DELAY_IN_MINUTES 0
 
 #include "AS5311.h"
 #include "vector"
@@ -13,6 +13,7 @@ const char *config =
 #define CS 9
 #define CLK A5
 #define DO A4
+#define LED A2
 
 #define INT_BUT 11
 #define RTC_INT_PIN 12
@@ -20,16 +21,8 @@ const char *config =
 #define HYPNOS3 5 // Hypnos 3V rail
 #define HYPNOS5 6 // Hypnos 5V rail
 
-volatile bool flag = false;
-volatile bool button = false;
-
-/*
-
-Ideas:
-Print out error bit value as well as the color
-Think about how to evaluate distance changes as % (???)
-
-*/
+volatile bool flag = false;     // Interrupt flag
+volatile bool button = false;   // Check to see if button was pressed
 
 LoomFactory<
     Enable::Internet::Disabled,
@@ -88,8 +81,10 @@ void setup() {
   digitalWrite(CS, HIGH);
   digitalWrite(CLK, LOW);
 
-  delay(20);                                        // Warm up time for AS5311
+  pinMode(LED, OUTPUT);
 
+  delay(20);                                        // Warm up time for AS5311
+/*
   // LED indicator
   uint32_t ledCheck = getErrorBits(CLK, CS, DO);    // Tracking magnet position for indicator
 
@@ -103,11 +98,11 @@ void setup() {
     delay(3000); // Gives user 3 seconds to adjust magnet before next reading
     ledCheck = getErrorBits(CLK, CS, DO);
   }
-
+*/
   // Green light flashes 3 times to indicate the magnet is setup well
   for (int i = 0; i < 3; i++) {
 
-    Loom.Neopixel().set_color(2, 0, 0, 200, 0);   // Changes Neopixel to green 
+    Loom.Neopixel().set_color(2, 0, 200, 0, 0);   // Changes Neopixel to green 
     delay(500);
 
     Loom.Neopixel().set_color(2, 0, 0, 0, 0);     // Turns off Neopixel
@@ -146,6 +141,9 @@ void loop() {
   pinMode(CLK, OUTPUT);
   pinMode(DO, INPUT_PULLUP);
 
+  // Protocol to turn on Neopixel
+  pinMode(LED, OUTPUT);
+
   delay(20);                    // Warm up time for AS5311
 
   Serial.println("IN LOOP");
@@ -156,11 +154,11 @@ void loop() {
     uint32_t ledCheck = getErrorBits(CLK, CS, DO);
 
     if (ledCheck >= 16 && ledCheck <= 18)
-      Loom.Neopixel().set_color(2, 0, 0, 200, 0);
+      Loom.Neopixel().set_color(2, 0, 200, 0, 0); // Green
     else if (ledCheck == 19)
-      Loom.Neopixel().set_color(2, 0, 200, 200, 0);
+      Loom.Neopixel().set_color(2, 0, 200, 200, 0); // Yellow
     else
-      Loom.Neopixel().set_color(2, 0, 200, 0, 0);
+      Loom.Neopixel().set_color(2, 0, 0, 200, 0); // Red
 
     delay(3000);
     Loom.Neopixel().set_color(2, 0, 0, 0, 0);
@@ -249,6 +247,9 @@ void loop() {
   pinMode(CLK, INPUT);
   pinMode(DO, INPUT);
   pinMode(CS, INPUT);
+
+  // Protocol to shut down Neopixel
+  pinMode(LED, INPUT);
 
   while(!flag) Loom.SleepManager().sleep();
 }
