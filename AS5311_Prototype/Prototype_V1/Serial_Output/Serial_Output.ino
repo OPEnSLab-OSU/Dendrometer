@@ -59,8 +59,6 @@ void setup() {
 
   }
 
-  digitalWrite(HYPNOS3, HIGH);
-
   // Takes 16 measurements and averages them for the starting Serial value (0-4095 value)
   for(int j = 0; j < 16; j++)
   {
