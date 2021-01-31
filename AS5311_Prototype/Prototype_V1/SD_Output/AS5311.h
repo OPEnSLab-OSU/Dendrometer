@@ -1,5 +1,5 @@
 
-// Returns the serial output from AS5331
+// Returns the serial output from AS533
 uint32_t bitbang(int CLK, int CS, int DO) {
   // write clock high to select the angular position data
   digitalWrite(CLK, HIGH);
@@ -25,6 +25,7 @@ uint32_t bitbang(int CLK, int CS, int DO) {
       value |= (1U << i);
   }
   digitalWrite(CS, HIGH);
+  digitalWrite(CLK, HIGH);
   return value;
 }
 

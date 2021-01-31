@@ -36,17 +36,11 @@ LoomManager Loom{&ModuleFactory};
 
 void ISR_pin12(){
   detachInterrupt(RTC_INT_PIN);
-  LPrintln("Pin 12 triggered");
-  digitalWrite(CS, HIGH);
-  digitalWrite(CLK, LOW);
   flag = true;
 }
 
 void ISR_pin11(){
   detachInterrupt(INT_BUT);
-  LPrintln("Pin 11 triggered");
-  digitalWrite(CS, HIGH);
-  digitalWrite(CLK, LOW);
   flag = true;
   button = true;
 }
@@ -66,6 +60,8 @@ void setup() {
   pinMode(HYPNOS5, OUTPUT);
   digitalWrite(HYPNOS5, HIGH); // Sets pin 6, the pin with the 5V rail, to output and enables the rail
 
+  delay(20);  // Warm up time for AS5311
+
   pinMode(RTC_INT_PIN, INPUT_PULLUP); // Enable waiting for RTC interrupt, MUST use a pullup since signal is active low
   pinMode(INT_BUT, INPUT_PULLUP);
 
@@ -83,17 +79,14 @@ void setup() {
 
   pinMode(LED, OUTPUT);
 
-  delay(20);                                        // Warm up time for AS5311
-
   // LED indicator
   uint32_t ledCheck = getErrorBits(CLK, CS, DO);    // Tracking magnet position for indicator
 
   while (ledCheck < 16 || ledCheck > 18) {
-
     if (ledCheck == 19)
       Loom.Neopixel().set_color(2, 0, 200, 200, 0); // Changes Neopixel to yellow
     else
-      Loom.Neopixel().set_color(2, 0, 200, 0, 0);   // Changes Neopixel to red
+      Loom.Neopixel().set_color(2, 0, 0, 200, 0);   // Changes Neopixel to red
 
     delay(3000); // Gives user 3 seconds to adjust magnet before next reading
     ledCheck = getErrorBits(CLK, CS, DO);
@@ -118,7 +111,6 @@ void setup() {
     start += getSerialPosition(CLK, CS, DO);
   }
   start /= 16;
-  //  Serial.println("Start: " + String(start));
 
   // Save 2 most significant bits of start
   prevTwoSig = start & 0xC00;
@@ -131,6 +123,8 @@ void loop() {
   digitalWrite(HYPNOS3, LOW);  // Turn on 3.3V rail
   digitalWrite(HYPNOS5, HIGH); // Turn on 5V rail
 
+  delay(20);                                        // Warm up time for AS5311
+
   // Protocol to turn on SD
   pinMode(10, OUTPUT);
   pinMode(23, OUTPUT);
@@ -140,13 +134,15 @@ void loop() {
   pinMode(CS, OUTPUT);
   pinMode(CLK, OUTPUT);
   pinMode(DO, INPUT_PULLUP);
+  digitalWrite(CS, HIGH);
+  digitalWrite(CLK, LOW);
 
   // Protocol to turn on Neopixel
   pinMode(LED, OUTPUT);
 
-  delay(20);                    // Warm up time for AS5311
+  delay(2000);                    // Warm up time for AS5311
 
-  Serial.println("IN LOOP");
+  // Serial.println("IN LOOP");
 
   Loom.power_up();
 
@@ -167,11 +163,7 @@ void loop() {
   flag = false;
   button = false;
 
-  Serial.println("After powerup");
-
-  Loom.measure();
-  Loom.package();
-  Loom.display_data();
+  // Serial.println("After powerup");
   
   // 16 point average of Serial Position
   int average = 0;
@@ -179,6 +171,7 @@ void loop() {
     average += getSerialPosition(CLK, CS, DO);
   }
   average /= 16;
+  
   // Serial.println("Average Serial Pos: " + String(average));
 
   uint32_t errorBits = getErrorBits(CLK, CS, DO);
@@ -199,8 +192,10 @@ void loop() {
   if (distanceMicro != prevMicro)
     differenceMicro = distanceMicro - prevMicro;
 
-  // Cannot add two keys to same module
-  // TODO: Talk to Loom Developers about this
+  Loom.measure();
+  Loom.package();
+  // Loom.display_data();
+
   Loom.add_data("AS5311", "Serial Value", average);
   Loom.add_data("Displacement (mm)", "mm", distance);
   Loom.add_data("Displacement (um)", "um", distanceMicro);
@@ -215,9 +210,9 @@ void loop() {
     Loom.add_data("Status", "Color", "Yellow");
   else if (errorBits == 23) // Error bits: 10111
     Loom.add_data("Status", "Color", "Red");
-  else if (errorBits < 16)                 // If OCF Bit is 0
+  else if (errorBits < 16)  // If OCF Bit is 0
     Loom.add_data("Status", "Color", "OCF Error");
-  else if (errorBits > 24)                 // If COF Bit is 1
+  else if (errorBits > 24)  // If COF Bit is 1
     Loom.add_data("Status", "Color", "COF Error");
   else
     Loom.add_data("Status", "Color", "Other Error");
