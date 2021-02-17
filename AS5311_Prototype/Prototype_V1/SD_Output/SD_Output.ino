@@ -194,7 +194,6 @@ void loop() {
 
   Loom.measure();
   Loom.package();
-  // Loom.display_data();
 
   Loom.add_data("AS5311", "Serial Value", average);
   Loom.add_data("Displacement (mm)", "mm", distance);
@@ -217,7 +216,32 @@ void loop() {
   else
     Loom.add_data("Status", "Color", "Other Error");
 
-  JsonObject data_json = Loom.internal_json(false);
+
+  const JsonObject data_json = Loom.internal_json(false);
+  // const JsonArray contents = data_json["contents"];
+  // const JsonArray timestamps = data_json["timestamps"];
+
+  // // for(JsonPair p : data_json) {
+  // //   Serial.println(p.key().c_str());
+  // //   // Serial.println(p.value());
+  // // }
+  // serializeJsonPretty(data_json, Serial);
+  // Serial.println("");
+  // serializeJsonPretty(contents, Serial);
+  // Serial.println("");
+  // serializeJsonPretty(timestamps, Serial);
+
+
+  float temp, humidity, SVP, VPD;
+
+  float e=2.71828;
+
+  temp = Loom.SHT31D().get_temperature();
+  humidity = Loom.SHT31D().get_humidity();
+  SVP = (0.61078*pow(e,(17.2694*temp)/(temp+237.3)));
+  VPD = SVP * (1 - (humidity / 100));
+
+  Loom.add_data("VPD", "VPD", VPD);
 
   Loom.SDCARD().log();
   prev = distance;
@@ -247,4 +271,5 @@ void loop() {
   pinMode(LED, INPUT);
 
   while(!flag) Loom.SleepManager().sleep();
+  // while(!flag) Loom.pause();
 }
