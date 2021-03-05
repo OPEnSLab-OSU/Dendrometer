@@ -169,22 +169,22 @@ void struct_to_json(const Dendro_t& in, const JsonObject& out) {
 	// AS5311 values
 	{
 		const JsonObject data = make_module_object(contents, "AS5311");
-		data["Serial Value"] = in.data.magneticSerial;
+		data["Serial_Value"] = in.data.magneticSerial;
 	}
     {
-		const JsonObject data = make_module_object(contents, "Displacement (mm)");
+		const JsonObject data = make_module_object(contents, "Displacement_(mm)");
 		data["mm"] = in.data.displacementMM;
 	}
     {
-		const JsonObject data = make_module_object(contents, "Displacement (um)");
+		const JsonObject data = make_module_object(contents, "Displacement_(um)");
 		data["um"] = in.data.displacementUM;
 	}
     {
-		const JsonObject data = make_module_object(contents, "Difference (mm)");
+		const JsonObject data = make_module_object(contents, "Difference_(mm)");
 		data["mm"] = in.data.differenceMM;
 	}
     {
-		const JsonObject data = make_module_object(contents, "Difference (um)");
+		const JsonObject data = make_module_object(contents, "Difference_(um)");
 		data["um"] = in.data.differenceUM;
 	}
     {
