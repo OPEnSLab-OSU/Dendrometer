@@ -1,14 +1,31 @@
 #define DELAY_IN_SECONDS 0
 #define DELAY_IN_MINUTES 15
 
+// Todo: Change client address per dendro and config
+// Todo: Add driver.sleep() at the end
+
+#include <RHReliableDatagram.h>
+#include <RH_RF95.h>
 #include "AS5311.h"
 #include "vector"
 #include <Loom.h>
 #include <stdint.h>
+#include "dendro.h"
 
 const char *config =
 #include "loomconfig.h"
-;
+    ;
+
+#define RFM95_CS 8
+#define RFM95_RST 4
+#define RFM95_INT 3
+#define ARDUINOJSON_USE_DOUBLE 1
+
+#define CLIENT_ADDRESS 1
+#define SERVER_ADDRESS 2
+
+RH_RF95 driver(RFM95_CS, RFM95_INT);
+RHReliableDatagram manager(driver, CLIENT_ADDRESS);
 
 #define CS 9
 #define CLK A5
@@ -21,8 +38,8 @@ const char *config =
 #define HYPNOS3 5 // Hypnos 3V rail
 #define HYPNOS5 6 // Hypnos 5V rail
 
-volatile bool flag = false;     // Interrupt flag
-volatile bool button = false;   // Check to see if button was pressed
+volatile bool flag = false;   // Interrupt flag
+volatile bool button = false; // Check to see if button was pressed
 
 LoomFactory<
     Enable::Internet::Disabled,
@@ -34,12 +51,14 @@ LoomFactory<
 
 LoomManager Loom{&ModuleFactory};
 
-void ISR_pin12(){
+void ISR_pin12()
+{
   detachInterrupt(RTC_INT_PIN);
   flag = true;
 }
 
-void ISR_pin11(){
+void ISR_pin11()
+{
   detachInterrupt(INT_BUT);
   flag = true;
   button = true;
@@ -52,7 +71,8 @@ float elapsed = 0;
 float prev = 0;
 float prevMicro = 0;
 
-void setup() {
+void setup()
+{
 
   // Needs to be done for Hypno Board
   pinMode(HYPNOS3, OUTPUT);
@@ -60,7 +80,7 @@ void setup() {
   pinMode(HYPNOS5, OUTPUT);
   digitalWrite(HYPNOS5, HIGH); // Sets pin 6, the pin with the 5V rail, to output and enables the rail
 
-  delay(20);  // Warm up time for AS5311
+  delay(20); // Warm up time for AS5311
 
   pinMode(RTC_INT_PIN, INPUT_PULLUP); // Enable waiting for RTC interrupt, MUST use a pullup since signal is active low
   pinMode(INT_BUT, INPUT_PULLUP);
@@ -80,25 +100,27 @@ void setup() {
   pinMode(LED, OUTPUT);
 
   // LED indicator
-  uint32_t ledCheck = getErrorBits(CLK, CS, DO);    // Tracking magnet position for indicator
+  uint32_t ledCheck = getErrorBits(CLK, CS, DO); // Tracking magnet position for indicator
 
-  while (ledCheck < 16 || ledCheck > 18) {
+  while (ledCheck < 16 || ledCheck > 18)
+  {
     if (ledCheck == 19)
       Loom.Neopixel().set_color(2, 0, 200, 200, 0); // Changes Neopixel to yellow
     else
-      Loom.Neopixel().set_color(2, 0, 0, 200, 0);   // Changes Neopixel to red
+      Loom.Neopixel().set_color(2, 0, 0, 200, 0); // Changes Neopixel to red
 
     delay(3000); // Gives user 3 seconds to adjust magnet before next reading
     ledCheck = getErrorBits(CLK, CS, DO);
   }
 
   // Green light flashes 3 times to indicate the magnet is setup well
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < 3; i++)
+  {
 
-    Loom.Neopixel().set_color(2, 0, 200, 0, 0);   // Changes Neopixel to green 
+    Loom.Neopixel().set_color(2, 0, 200, 0, 0); // Changes Neopixel to green
     delay(500);
 
-    Loom.Neopixel().set_color(2, 0, 0, 0, 0);     // Turns off Neopixel
+    Loom.Neopixel().set_color(2, 0, 0, 0, 0); // Turns off Neopixel
     delay(500);
   }
 
@@ -107,7 +129,8 @@ void setup() {
   Loom.InterruptManager().register_ISR(INT_BUT, ISR_pin11, LOW, ISR_Type::IMMEDIATE);
 
   // Takes 16 measurements and averages them for the starting Serial value (0-4095 value)
-  for (int j = 0; j < 16; j++) {
+  for (int j = 0; j < 16; j++)
+  {
     start += getSerialPosition(CLK, CS, DO);
   }
   start /= 16;
@@ -116,14 +139,20 @@ void setup() {
   prevTwoSig = start & 0xC00;
 
   Loom.Neopixel().set_color(2, 0, 0, 0, 0); // Turns off Neopixel
+
+  if (!manager.init())
+    Serial.println("init failed");
 }
 
-void loop() {
+uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
+
+void loop()
+{
 
   digitalWrite(HYPNOS3, LOW);  // Turn on 3.3V rail
   digitalWrite(HYPNOS5, HIGH); // Turn on 5V rail
 
-  delay(20);                                        // Warm up time for AS5311
+  delay(20); // Warm up time for AS5311
 
   // Protocol to turn on SD
   pinMode(10, OUTPUT);
@@ -140,13 +169,14 @@ void loop() {
   // Protocol to turn on Neopixel
   pinMode(LED, OUTPUT);
 
-  delay(2000);                    // Warm up time for AS5311
+  delay(2000); // Warm up time for AS5311
 
   // Serial.println("IN LOOP");
 
   Loom.power_up();
 
-  if (button) {
+  if (button)
+  {
     uint32_t ledCheck = getErrorBits(CLK, CS, DO);
 
     if (ledCheck >= 16 && ledCheck <= 18)
@@ -159,19 +189,20 @@ void loop() {
     delay(3000);
     Loom.Neopixel().set_color(2, 0, 0, 0, 0);
   }
-  
+
   flag = false;
   button = false;
 
   // Serial.println("After powerup");
-  
+
   // 16 point average of Serial Position
   int average = 0;
-  for (int j = 0; j < 16; j++) {
+  for (int j = 0; j < 16; j++)
+  {
     average += getSerialPosition(CLK, CS, DO);
   }
   average /= 16;
-  
+
   // Serial.println("Average Serial Pos: " + String(average));
 
   uint32_t errorBits = getErrorBits(CLK, CS, DO);
@@ -209,36 +240,20 @@ void loop() {
     Loom.add_data("Status", "Color", "Yellow");
   else if (errorBits == 23) // Error bits: 10111
     Loom.add_data("Status", "Color", "Red");
-  else if (errorBits < 16)  // If OCF Bit is 0
+  else if (errorBits < 16) // If OCF Bit is 0
     Loom.add_data("Status", "Color", "OCF Error");
-  else if (errorBits > 24)  // If COF Bit is 1
+  else if (errorBits > 24) // If COF Bit is 1
     Loom.add_data("Status", "Color", "COF Error");
   else
     Loom.add_data("Status", "Color", "Other Error");
 
-
-  const JsonObject data_json = Loom.internal_json(false);
-  // const JsonArray contents = data_json["contents"];
-  // const JsonArray timestamps = data_json["timestamps"];
-
-  // // for(JsonPair p : data_json) {
-  // //   Serial.println(p.key().c_str());
-  // //   // Serial.println(p.value());
-  // // }
-  // serializeJsonPretty(data_json, Serial);
-  // Serial.println("");
-  // serializeJsonPretty(contents, Serial);
-  // Serial.println("");
-  // serializeJsonPretty(timestamps, Serial);
-
-
   float temp, humidity, SVP, VPD;
 
-  float e=2.71828;
+  float e = 2.71828;
 
   temp = Loom.SHT31D().get_temperature();
   humidity = Loom.SHT31D().get_humidity();
-  SVP = (0.61078*pow(e,(17.2694*temp)/(temp+237.3)));
+  SVP = (0.61078 * pow(e, (17.2694 * temp) / (temp + 237.3)));
   VPD = SVP * (1 - (humidity / 100));
 
   Loom.add_data("VPD", "VPD", VPD);
@@ -246,6 +261,22 @@ void loop() {
   Loom.SDCARD().log();
   prev = distance;
   prevMicro = distanceMicro;
+
+  const JsonObject data_json = Loom.internal_json(false);
+
+  Dendro_t out_struct;
+
+  json_to_struct(data_json, out_struct);
+
+  manager.setRetries(5);
+
+  // Send a message to manager_server
+  if (manager.sendtoWait(out_struct.raw, (uint8_t)sizeof(out_struct.raw), SERVER_ADDRESS))
+  {
+
+  }
+  else
+    Serial.println("sendtoWait failed, no ack received");
 
   // set the RTC alarm to a specified duration, DELAY_IN_MINUTES and DELAY_IN_SECONDS, with TimeSpan
   Loom.InterruptManager().RTC_alarm_duration(TimeSpan(0, 0, DELAY_IN_MINUTES, DELAY_IN_SECONDS));
@@ -270,6 +301,7 @@ void loop() {
   // Protocol to shut down Neopixel
   pinMode(LED, INPUT);
 
-  while(!flag) Loom.SleepManager().sleep();
+  while (!flag)
+    Loom.SleepManager().sleep();
   // while(!flag) Loom.pause();
 }

@@ -95,9 +95,9 @@ void loop()
 
             Loom.display_data();
 
-            // Send a reply back to the originator client
-            if (!manager.sendtoWait(data, sizeof(data), from))
-                Serial.println("sendtoWait failed");
+            // // Send a reply back to the originator client
+            // if (!manager.sendtoWait(data, sizeof(data), from))
+            //     Serial.println("sendtoWait failed");
             if(!Loom.GoogleSheets().publish()) {
                 Serial.println("failed to print to Gsheets");
             }
