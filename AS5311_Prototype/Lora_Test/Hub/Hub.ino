@@ -25,6 +25,12 @@ void setup()
         Serial.println("init failed");
     // Defaults after init are 434.0MHz, 13dBm, Bw = 125 kHz, Cr = 4/5, Sf = 128chips/symbol, CRC on
 
+    bool status = driver.setFrequency(915.0);
+    if(status) {
+	    Serial.println("Success");
+    } else {
+        Serial.println("Failed");
+    }
     // The default transmitter power is 13dBm, using PA_BOOST.
     // If you are using RFM95/96/97/98 modules which uses the PA_BOOST transmitter pin, then
     // you can set transmitter powers from 2 to 20 dBm:
@@ -39,6 +45,8 @@ void setup()
     // Detection shows no activity on the channel before transmitting by setting
     // the CAD timeout to non-zero:
     //  driver.setCADTimeout(10000);
+    manager.setRetries(5);
+    manager.setTimeout(400);
 }
 
 uint8_t data[] = "And hello back to you";
@@ -69,6 +77,17 @@ void loop()
             struct_to_json(in_data, foo);
 
             serializeJsonPretty(foo, Serial);
+
+            /* RSSI which is the receiver signal strength indicator. This number will range from about -15 to about -100.
+            The larger the number (-15 being the highest you'll likely see) the stronger the signal.
+
+            "Minimum reported RSSI seen for successful comms was about -91"
+
+            */
+           
+            Serial.print("RSSI: ");
+            Serial.println(driver.lastRssi(), DEC);
+
 
             // Send a reply back to the originator client
             if (!manager.sendtoWait(data, sizeof(data), from))

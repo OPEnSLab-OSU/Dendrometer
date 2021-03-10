@@ -142,6 +142,13 @@ void setup()
 
   if (!manager.init())
     Serial.println("init failed");
+
+	bool status = driver.setFrequency(915.0);
+	LPrintln( "\tSetting Frequency ", (status) ? "Success" : "Failed" );
+  
+  driver.setTxPower(20, false);
+  manager.setRetries(5);
+  manager.setTimeout(400);
 }
 
 uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
@@ -267,8 +274,6 @@ void loop()
   Dendro_t out_struct;
 
   json_to_struct(data_json, out_struct);
-
-  manager.setRetries(5);
 
   // Send a message to manager_server
   if (manager.sendtoWait(out_struct.raw, (uint8_t)sizeof(out_struct.raw), SERVER_ADDRESS))
