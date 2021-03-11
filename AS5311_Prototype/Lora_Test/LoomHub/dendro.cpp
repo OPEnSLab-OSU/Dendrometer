@@ -144,6 +144,11 @@ void struct_to_json(const Dendro_t& in, const JsonObject& out) {
 	// contents array
 	const JsonArray contents = out.createNestedArray("contents");
 	// add objects for each sensor!
+	// Name (Since Loom only writes 'contents' array into GSheets)
+	{
+		const JsonObject data = make_module_object(contents, "Instance");
+		data["Name"] = in.data.name;
+	}
 	// vbatt
 	{
 		const JsonObject data = make_module_object(contents, "Analog");
