@@ -42,6 +42,9 @@ LoomManager Loom{ &ModuleFactory };
 #define DO A4
 #define LED A2
 
+
+#define DELAY_IN_SECONDS 0
+#define DELAY_IN_MINUTES 15
 #define INT_BUT 11
 #define RTC_INT_PIN 12
 
@@ -104,10 +107,27 @@ void setup()
 
 void loop() 
 {
+  pinMode(5, OUTPUT);    // Enable control of 3.3V rail
+  pinMode(6, OUTPUT);   // Enable control of 5V rail
+  pinMode(13, OUTPUT);
   //initialize Hypnos
   digitalWrite(5, LOW); // Enable 3.3V rail
   digitalWrite(6, HIGH);  // Enable 5V rail
   digitalWrite(13, LOW);
+
+  delay(100);
+  
+  // Protocol to turn on AS5311
+  pinMode(CS, OUTPUT);
+  pinMode(CLK, OUTPUT);
+  pinMode(DO, INPUT_PULLUP);
+  digitalWrite(CS, HIGH);
+  digitalWrite(CLK, LOW);
+
+  // Protocol to turn on Neopixel
+  pinMode(LED, OUTPUT);
+  
+  delay(2000);
   
   Serial.println("Looping now");
   
@@ -196,7 +216,28 @@ void loop()
 	  Loom.LoRa().send_batch(1, 4000);
   }
 
-	Loom.pause();	// Delay between interations set with 'interval' in config
+  Loom.InterruptManager().RTC_alarm_duration(TimeSpan(0, 0, DELAY_IN_MINUTES, DELAY_IN_SECONDS));
+  Loom.InterruptManager().reconnect_interrupt(RTC_INT_PIN);
+  Loom.InterruptManager().reconnect_interrupt(INT_BUT);
+  
+  Loom.power_down();
+
+  // Protocol to shut down SD
+  pinMode(23, INPUT);
+  pinMode(24, INPUT);
+  pinMode(10, INPUT);
+
+  // Protocol to shut down AS5311
+  pinMode(CLK, INPUT);
+  pinMode(DO, INPUT);
+  pinMode(CS, INPUT);
+
+  pinMode(LED, INPUT);
+
+
+  while (!flag)
+    Loom.SleepManager().sleep();
+  // while(!flag) Loom.pause();
 }
 
 
