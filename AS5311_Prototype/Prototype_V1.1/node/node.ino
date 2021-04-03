@@ -61,10 +61,6 @@ int counter;
 
 void setup() 
 {
-	Loom.begin_serial(true);
-	Loom.parse_config(json_config);
-	Loom.print_config();
-  
   // Enable waiting for RTC interrupt, MUST use a pullup since signal is active low
   pinMode(RTC_INT_PIN, INPUT_PULLUP);  
   pinMode(INT_BUT, INPUT_PULLUP);
@@ -76,6 +72,10 @@ void setup()
   digitalWrite(5, LOW); // Enable 3.3V rail
   digitalWrite(6, HIGH);  // Enable 5V rail
   digitalWrite(13, LOW);
+
+  Loom.begin_serial(true);
+  Loom.parse_config(json_config);
+  Loom.print_config();
 
   //Begin Communication with AS5311
   init_AS();
@@ -107,9 +107,6 @@ void setup()
 
 void loop() 
 {
-  pinMode(5, OUTPUT);    // Enable control of 3.3V rail
-  pinMode(6, OUTPUT);   // Enable control of 5V rail
-  pinMode(13, OUTPUT);
   //initialize Hypnos
   digitalWrite(5, LOW); // Enable 3.3V rail
   digitalWrite(6, HIGH);  // Enable 5V rail
@@ -222,6 +219,10 @@ void loop()
   
   Loom.power_down();
 
+  // Protocol to turn off Hypnos
+  digitalWrite(5, HIGH); // Disabling all pins before going to sleep.
+  digitalWrite(6, LOW);
+  
   // Protocol to shut down SD
   pinMode(23, INPUT);
   pinMode(24, INPUT);
@@ -232,8 +233,7 @@ void loop()
   pinMode(DO, INPUT);
   pinMode(CS, INPUT);
 
-  pinMode(LED, INPUT);
-
+  pinMode(LED, INPUT); // Turns off Neopixel
 
   while (!flag)
     Loom.SleepManager().sleep();
