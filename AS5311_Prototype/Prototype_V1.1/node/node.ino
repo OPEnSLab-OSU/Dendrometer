@@ -1,22 +1,3 @@
-///////////////////////////////////////////////////////////////////////////////
-
-// This is a basic example of sending data via LoRa. 
-
-// The corresponding example is LoRa > Receive (or Receive_Blocking)
-
-// These two examples are the Loom equivalent of the basic RX / TX LoRa 
-// examples
-
-// See https://openslab-osu.github.io/Loom/html/class_loom___lo_ra.html
-// for details of LoRa config options
-
-// While you can send whatever data you collect, for the purposes of this 
-// example, only analog data is being collected
-
-// Documentation for LoRa: https://openslab-osu.github.io/Loom/doxygenV2/html/class_loom___lo_ra.html
-
-///////////////////////////////////////////////////////////////////////////////
-
 #include <Loom.h>
 #include "AS5311.h"
 
@@ -66,12 +47,10 @@ void setup()
   pinMode(INT_BUT, INPUT_PULLUP);
   pinMode(5, OUTPUT);    // Enable control of 3.3V rail
   pinMode(6, OUTPUT);   // Enable control of 5V rail
-  pinMode(13, OUTPUT);
 
-  //initialize Hypnos
+  // Initialize Hypnos
   digitalWrite(5, LOW); // Enable 3.3V rail
   digitalWrite(6, HIGH);  // Enable 5V rail
-  digitalWrite(13, LOW);
 
   Loom.begin_serial(true);
   Loom.parse_config(json_config);
@@ -83,15 +62,12 @@ void setup()
   //LED pin set
   pinMode(LED, OUTPUT);
 
-  //LED indicator
-  /*-------------- Keep commented until utilized. Will cause infinite loop --------------------------
   //Make sure the magnet is positioned correctly
   verify_position();
+  
   //Flash three times for verification
   green_flash();
-  ----------------------------------------------------------------------------------------------------
-  */
-  
+
   Loom.InterruptManager().register_ISR(RTC_INT_PIN, ISR_pin12, LOW, ISR_Type::IMMEDIATE);
   Loom.InterruptManager().register_ISR(INT_BUT, ISR_pin11, LOW, ISR_Type::IMMEDIATE);
   delay(5000);
@@ -110,7 +86,6 @@ void loop()
   //initialize Hypnos
   digitalWrite(5, LOW); // Enable 3.3V rail
   digitalWrite(6, HIGH);  // Enable 5V rail
-  digitalWrite(13, LOW);
 
   delay(100);
   
@@ -124,8 +99,6 @@ void loop()
   // Protocol to turn on Neopixel
   pinMode(LED, OUTPUT);
   
-  delay(2000);
-  
   Serial.println("Looping now");
   
   init_AS();
@@ -135,8 +108,6 @@ void loop()
     pinMode(23, OUTPUT);
     pinMode(24, OUTPUT);
     pinMode(10, OUTPUT);
-  
-    // delay(1000);
   
     Loom.power_up();
   }
@@ -200,7 +171,7 @@ void loop()
   prev = distance;
   prevMicro = distanceMicro;
 //-----------------------------------------------------------------------------------
-  
+
 	Loom.package();
 	Loom.display_data();
 
@@ -216,18 +187,14 @@ void loop()
   Loom.InterruptManager().RTC_alarm_duration(TimeSpan(0, 0, DELAY_IN_MINUTES, DELAY_IN_SECONDS));
   Loom.InterruptManager().reconnect_interrupt(RTC_INT_PIN);
   Loom.InterruptManager().reconnect_interrupt(INT_BUT);
-  
+
   Loom.power_down();
 
-  // Protocol to turn off Hypnos
-  digitalWrite(5, HIGH); // Disabling all pins before going to sleep.
-  digitalWrite(6, LOW);
-  
   // Protocol to shut down SD
   pinMode(23, INPUT);
   pinMode(24, INPUT);
   pinMode(10, INPUT);
-
+  
   // Protocol to shut down AS5311
   pinMode(CLK, INPUT);
   pinMode(DO, INPUT);
@@ -235,15 +202,15 @@ void loop()
 
   pinMode(LED, INPUT); // Turns off Neopixel
 
-  while (!flag)
-    Loom.SleepManager().sleep();
-  // while(!flag) Loom.pause();
+  // Protocol to turn off Hypnos
+  digitalWrite(5, HIGH); // Disabling all pins before going to sleep.
+  digitalWrite(6, LOW);
+
+  Loom.SleepManager().sleep();
+  while (!flag);
 }
 
-
-
 //AS5311 functions
-
 void init_AS(){
   // Protocol to turn on AS5311
   pinMode(CS, OUTPUT);
@@ -253,8 +220,6 @@ void init_AS(){
   digitalWrite(CLK, LOW);
   delay(2000);
 }
-
-
 
 int measure_average(){
   int average = 0;
@@ -266,8 +231,8 @@ int measure_average(){
   return average;
 }
 
+// Takes 16 measurements and averages them for the starting Serial value (0-4095 value)
 void serial_init_measure(){
-  // Takes 16 measurements and averages them for the starting Serial value (0-4095 value)
   for (int j = 0; j < 16; j++)
   {
     start += getSerialPosition(CLK, CS, DO);
@@ -276,7 +241,6 @@ void serial_init_measure(){
 }
 
 // LED Functions
-
 void verify_LED_button(){
   if (button)
   {
@@ -296,6 +260,7 @@ void verify_LED_button(){
   button = false;
 }
 
+// Ensures that magnet starts in good position before continuing program
 void verify_position(){
   uint32_t ledCheck = getErrorBits(CLK, CS, DO); // Tracking magnet position for indicator
 
@@ -311,6 +276,7 @@ void verify_position(){
   }
 }
 
+// Flashes green on Neopixel 3 times
 void green_flash(){
   for (int i = 0; i < 3; i++)
   {
