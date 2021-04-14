@@ -28,6 +28,7 @@ LoomManager Loom{ &ModuleFactory };
 #define DELAY_IN_MINUTES 15
 #define INT_BUT 11
 #define RTC_INT_PIN 12
+#define MAX_RETRIES 20
 
 //Global Variables
 volatile bool flag = false;   // Interrupt flag
@@ -37,8 +38,6 @@ uint32_t prevTwoSig = 0;
 float elapsed = 0;
 float prev = 0;
 float prevMicro = 0;
-const int max_packets = 10;
-int counter;
 
 void setup() 
 {
@@ -77,7 +76,7 @@ void setup()
   prevTwoSig = start & 0xC00;
   
   Loom.Neopixel().set_color(2, 0, 0, 0, 0); // Turns off Neopixel
-  counter = 0;
+
 	LPrintln("\n ** Setup Complete ** ");
 }
 
@@ -176,13 +175,15 @@ void loop()
 	Loom.display_data();
 
   // Log SD in case it doesn't send
-  Loom.log_all();
-  counter++;
+  Loom.SDCARD().log();
   
 	// Send to address 1
-  if(counter%max_packets == 0){
-	  Loom.LoRa().send_batch(1, 4000);
-  }
+	for (int j = 0; j < MAX_RETRIES; j++){
+    if(!Loom.LoRa().send(1)){
+      Serial.println("\n Send Failed, Retrying in 5 seconds...");
+      delay(5000);
+    } else {break;}
+  };
 
   Loom.InterruptManager().RTC_alarm_duration(TimeSpan(0, 0, DELAY_IN_MINUTES, DELAY_IN_SECONDS));
   Loom.InterruptManager().reconnect_interrupt(RTC_INT_PIN);

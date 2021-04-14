@@ -31,13 +31,14 @@ void setup()
 	Loom.print_config();
 
 	LPrintln("\n ** Setup Complete ** ");
+	LPrintln("\n Looping... Please ignore recieve failure messages");
 }
 
 void loop() 
-{
-	if (Loom.LoRa().receive_batch_blocking(4000)) {
+{	
+	if (Loom.LoRa().receive_blocking(10000)) {
 		Loom.display_data();
-		if(!Loom.GoogleSheets().publish_batch()) {
+		if(!Loom.GoogleSheets().publish()) {
                 Serial.println("failed to print to Gsheets");
             }
 	}
