@@ -38,7 +38,6 @@ void loop()
 {	
 	if (Loom.LoRa().receive_blocking(10000)) {
 		Loom.display_data();
-		Loom.SDCARD().log();
 		if(!Loom.GoogleSheets().publish()) {
                 Serial.println("failed to print to Gsheets");
             }

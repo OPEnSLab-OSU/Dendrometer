@@ -24,6 +24,14 @@
 /*not used if previous param is true*/  'testTab2'\
       ]\
     },\
+    {\
+			'name':'Ethernet',\
+			'params':[\
+				'Ether1',\
+				[134,171,186,10,33,221],\
+				[192,168,0,1]\
+			]\
+    },\
 		{\
 			'name':'SD',\
 			'params':[true,1000,10,'datafile',false]\
@@ -31,6 +39,6 @@
     {\
       'name':'BatchSD',\
       'params': [true, 1000, 10]\
-     }\
+    }\
 	]\
 }"
