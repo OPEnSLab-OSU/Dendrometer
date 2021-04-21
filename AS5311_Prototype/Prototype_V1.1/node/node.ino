@@ -178,13 +178,8 @@ void loop()
   Loom.SDCARD().log();
   
 	// Send to address 1
-	for (int j = 0; j < MAX_RETRIES; j++){
-    if(!Loom.LoRa().send(1)){
-      Serial.println("\n Send Failed, Retrying in 5 seconds...");
-      delay(5000);
-    } else {break;}
-  };
-
+  Loom.LoRa().send(1);
+  
   Loom.InterruptManager().RTC_alarm_duration(TimeSpan(0, 0, DELAY_IN_MINUTES, DELAY_IN_SECONDS));
   Loom.InterruptManager().reconnect_interrupt(RTC_INT_PIN);
   Loom.InterruptManager().reconnect_interrupt(INT_BUT);
