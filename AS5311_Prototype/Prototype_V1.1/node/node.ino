@@ -28,8 +28,7 @@ LoomManager Loom{ &ModuleFactory };
 #define DELAY_IN_MINUTES 15
 #define INT_BUT 11
 #define RTC_INT_PIN 12
-#define MAX_RETRIES 20
-
+ 
 //Global Variables
 volatile bool flag = false;   // Interrupt flag
 volatile bool button = false; // Check to see if button was pressed
