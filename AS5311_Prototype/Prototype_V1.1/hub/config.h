@@ -21,7 +21,7 @@
         '/macros/s/AKfycbzySpouxdaHYh6f1e7DI24i4s8XTGDe-X6d-9uaR7HVrpFNWUt7/exec',\
         '11bmZETLyFutZHwZRrpmsNFy0VrWmJ-myskjLZ6cZS-w',\
 /*true to autoname tab*/        true,\
-/*not used if previous param is true*/  'testTab2'\
+/*not used if previous param is true*/  'testTab'\
       ]\
     },\
     {\

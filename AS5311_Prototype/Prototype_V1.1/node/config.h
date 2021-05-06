@@ -8,7 +8,7 @@
 	'components':[\
 		{\
 			'name':'Analog',\
-			'params':'default'\
+			'params':[8,12,false,false,false,false,false,false,0,0,0,0,0,0,25]\
 		},\
     {\
       'name':'SHT31D',\
@@ -29,10 +29,6 @@
     {\
       'name':'SD',\
       'params':[true,1000,10,'dend',true]\
-    },\
-    {\
-      'name':'BatchSD',\
-      'params': [true, 1000, 10]\
     },\
     {\
       'name':'Neopixel',\

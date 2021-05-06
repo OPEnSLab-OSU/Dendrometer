@@ -133,12 +133,13 @@ void loop()
     differenceMicro = distanceMicro - prevMicro;
 
   Loom.measure();
+	Loom.package();
 
-  Loom.add_data("AS5311", "Serial Value", average);
-  Loom.add_data("Displacement (mm)", "mm", distance);
-  Loom.add_data("Displacement (um)", "um", distanceMicro);
-  Loom.add_data("Difference (mm)", "mm", difference);
-  Loom.add_data("Difference (um)", "um", differenceMicro);
+  Loom.add_data("AS5311", "Serial_Value", average);
+  Loom.add_data("Displacement", "mm", distance);
+  Loom.add_data("Displacement", "um", distanceMicro);
+  Loom.add_data("Difference", "mm", difference);
+  Loom.add_data("Difference", "um", differenceMicro);
 
   // Logs the status of the magnet position (whether the data is good or not) {Green = Good readings, Red = Bad readings}
   // Ignores the parity bit (last bit)
@@ -149,11 +150,11 @@ void loop()
   else if (errorBits == 23) // Error bits: 10111
     Loom.add_data("Status", "Color", "Red");
   else if (errorBits < 16) // If OCF Bit is 0
-    Loom.add_data("Status", "Color", "OCF Error");
+    Loom.add_data("Status", "Color", "OCF_Error");
   else if (errorBits > 24) // If COF Bit is 1
-    Loom.add_data("Status", "Color", "COF Error");
+    Loom.add_data("Status", "Color", "COF_Error");
   else
-    Loom.add_data("Status", "Color", "Other Error");
+    Loom.add_data("Status", "Color", "Other_Error");
 
   float temp, humidity, SVP, VPD;
 
@@ -170,7 +171,6 @@ void loop()
   prevMicro = distanceMicro;
 //-----------------------------------------------------------------------------------
 
-	Loom.package();
 	Loom.display_data();
 
   // Log SD in case it doesn't send
