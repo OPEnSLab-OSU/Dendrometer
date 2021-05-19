@@ -23,7 +23,6 @@ LoomManager Loom{ &ModuleFactory };
 #define DO A4
 #define LED A2
 
-
 #define DELAY_IN_SECONDS 0
 #define DELAY_IN_MINUTES 15
 #define INT_BUT 11
@@ -136,10 +135,10 @@ void loop()
 	Loom.package();
 
   Loom.add_data("AS5311", "Serial_Value", average);
-  Loom.add_data("Displacement", "mm", distance);
-  Loom.add_data("Displacement", "um", distanceMicro);
-  Loom.add_data("Difference", "mm", difference);
-  Loom.add_data("Difference", "um", differenceMicro);
+  Loom.add_data("Displacement_mm", "mm", distance);
+  Loom.add_data("Displacement_um", "um", distanceMicro);
+  Loom.add_data("Difference_mm", "mm", difference);
+  Loom.add_data("Difference_um", "um", differenceMicro);
 
   // Logs the status of the magnet position (whether the data is good or not) {Green = Good readings, Red = Bad readings}
   // Ignores the parity bit (last bit)

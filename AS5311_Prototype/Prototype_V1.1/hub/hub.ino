@@ -18,9 +18,8 @@ LoomManager Loom{ &ModuleFactory };
 
 
 
-void setup() 
-{ 
-
+void setup() {
+  
   pinMode(5, OUTPUT);    // Enable control of 3.3V rail
   pinMode(6, OUTPUT);   // Enable control of 5V rail
   digitalWrite(5, LOW); // Enable 3.3V rail
@@ -38,7 +37,7 @@ void loop()
 {	
 	if (Loom.LoRa().receive_blocking(10000)) {
 		Loom.display_data();
-		Lprintln(Loom.LoRa().get_rssi())
+    //Loom.SDCARD().log();
 		if(!Loom.GoogleSheets().publish()) {
                 Serial.println("failed to print to Gsheets");
             }
