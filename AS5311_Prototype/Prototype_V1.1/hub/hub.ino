@@ -16,7 +16,7 @@ LoomFactory<
 
 LoomManager Loom{ &ModuleFactory };
 
-
+float rssi;
 
 void setup() {
   
@@ -37,9 +37,11 @@ void loop()
 {	
 	if (Loom.LoRa().receive_blocking(10000)) {
 		Loom.display_data();
+    //rssi = Loom.LoRa().get_signal_strength();
+    //LPrintln("RSSI: " + String(rssi));
     //Loom.SDCARD().log();
 		if(!Loom.GoogleSheets().publish()) {
                 Serial.println("failed to print to Gsheets");
-            }
+    }
 	}
 }

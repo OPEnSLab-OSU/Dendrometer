@@ -16,7 +16,7 @@
     },\
     {\
       'name':'DS3231',\
-      'params':'default'\
+      'params':[10, false, true]\
     },\
     {\
       'name':'Interrupt_Manager',\

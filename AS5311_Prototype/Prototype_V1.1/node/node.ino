@@ -95,9 +95,8 @@ void loop()
 
   // Protocol to turn on Neopixel
   pinMode(LED, OUTPUT);
-  
-  Serial.println("Looping now");
-  
+
+  // Initialize magnet sensor  
   init_AS();
   delay(2000); //Warmup AS5311 chip
 
@@ -109,6 +108,7 @@ void loop()
     Loom.power_up();
   }
 
+  // Check to see if button was pressed for LED indicator
   verify_LED_button();
 
   //-------------------DATA MANAGEMENT-------------------------------------------------------
@@ -165,6 +165,9 @@ void loop()
   VPD = SVP * (1 - (humidity / 100));
 
   Loom.add_data("VPD", "VPD", VPD);
+
+  //float rssi = Loom.LoRa().get_signal_strength();
+  //Loom.add_data("RSSI", "RSSI", rssi);
 
   prev = distance;
   prevMicro = distanceMicro;
