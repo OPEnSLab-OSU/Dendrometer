@@ -16,6 +16,7 @@ The Dendrometer is an ongoing project that strives to enable ecological research
   - Integration with [Loom](https://github.com/OPEnSLab-OSU/Loom), which will allow this device to support plug-and-play functionalities with integrated sensors
   
 ## Mechanical
+
   - Mechanical structure made out of carbon fiber to mitigate thermal expansion in varied temperature environments
   - Spring used to avoid friction and hysteresis between back and forth motion. Controls movement between growth and shrinkage of plant
 
@@ -29,10 +30,13 @@ The Dendrometer is an ongoing project that strives to enable ecological research
 <img align="right" src="https://user-images.githubusercontent.com/55998145/108146037-8a11c300-7070-11eb-9dc2-e7b130155b2e.jpg" width="250">  
 
   - Includes Neopixel LED to indicate status of magnet and interrupt button to wake up system from sleep
-  - Records temperature and humidity to calculate vapor pressure deficit (VPD) 
-  - Programmed for 15 minute intervals between each reading but can be adjusted to a user's desired value
+  - Uses SHT30 to record temperture and humidity in a weatherproof casing
 
 ## State Machine Diagram
+
+  - Takes measurements every 15 minutes (can be adjusted to a user's desired time interval)
+  - Uses temperature and humidity to calculate vapor pressure deficit (VPD) 
+ 
 <p align="center">
     <img src="https://user-images.githubusercontent.com/55998145/122619924-7ab67c80-d046-11eb-89d6-90274238d09d.png" alt="State Machine Diagram" width="100%">
   </a>
