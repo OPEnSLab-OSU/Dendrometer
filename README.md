@@ -5,7 +5,7 @@
 
 <h3 align="center">Dendrometer</h3>
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4482948.svg)](https://doi.org/10.5281/zenodo.4482948)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5126776.svg)](https://doi.org/10.5281/zenodo.5126776)
 
 ## Introduction
 The Dendrometer is an ongoing project that strives to enable ecological researchers and/or care-takers of grape plants to be able to effectively measure diurnal fluctuations in grape vines. Such information can be crucial for producing market-ideal grapes, as the shrinkage and growth of the vines are important indicators of when the plant is in need of water. Learn more about the design and outcomes on our <a href="https://github.com/OPEnSLab-OSU/OPEnS-Lab-Home/wiki/Dendrometer">Dendrometer Lab Wiki</a>. 
