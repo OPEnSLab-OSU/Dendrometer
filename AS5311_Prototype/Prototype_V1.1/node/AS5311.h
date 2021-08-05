@@ -1,4 +1,3 @@
-
 // Returns the serial output from AS533
 uint32_t bitbang(int CLK, int CS, int DO) {
   // write clock high to select the angular position data

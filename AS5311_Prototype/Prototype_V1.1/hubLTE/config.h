@@ -5,10 +5,6 @@
 		'instance':1\
 	},\
 	'components':[\
-    {\
-      'name':'Digital',\
-      'params':'default'\
-    },\
 		{\
 			'name':'LoRa',\
 			'params':[255,1,23,3,200]\
@@ -30,11 +26,11 @@
     },\
 		{\
 			'name':'SD',\
-			'params':[true,1000,10,'datafile',false]\
+			'params':[true,1000,10,'dend',true]\
 		},\
     {\
       'name':'BatchSD',\
       'params': [true, 1000, 10]\
-     }\
+    }\
 	]\
 }"

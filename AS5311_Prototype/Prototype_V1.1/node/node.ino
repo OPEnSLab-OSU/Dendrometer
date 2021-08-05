@@ -36,6 +36,8 @@ uint32_t prevTwoSig = 0;
 float elapsed = 0;
 float prev = 0;
 float prevMicro = 0;
+const int max_packets = 10; // Number of packets collected before sending through LoRa
+int counter = 0;
 
 void setup() 
 {
@@ -53,34 +55,36 @@ void setup()
   Loom.parse_config(json_config);
   Loom.print_config();
 
-  //Begin Communication with AS5311
+  // Begin Communication with AS5311
   init_AS();
 
-  //LED pin set
+  // LED pin set
   pinMode(LED, OUTPUT);
 
-  //Make sure the magnet is positioned correctly
+  // Make sure the magnet is positioned correctly
   verify_position();
   
-  //Flash three times for verification
+  // Flash three times for verification
   green_flash();
 
   Loom.InterruptManager().register_ISR(RTC_INT_PIN, ISR_pin12, LOW, ISR_Type::IMMEDIATE);
   Loom.InterruptManager().register_ISR(INT_BUT, ISR_pin11, LOW, ISR_Type::IMMEDIATE);
   delay(5000);
   
+  // Starting measurement of AS5311
   serial_init_measure();
+
   // Save 2 most significant bits of start
   prevTwoSig = start & 0xC00;
   
   Loom.Neopixel().set_color(2, 0, 0, 0, 0); // Turns off Neopixel
 
-	LPrintln("\n ** Setup Complete ** ");
+  LPrintln("\n ** Setup Complete ** ");
 }
 
 void loop() 
 {
-  //initialize Hypnos
+  // Initialize Hypnos
   digitalWrite(5, LOW); // Enable 3.3V rail
   digitalWrite(6, HIGH);  // Enable 5V rail
 
@@ -98,7 +102,7 @@ void loop()
 
   // Initialize magnet sensor  
   init_AS();
-  delay(2000); //Warmup AS5311 chip
+  delay(2000); // Warmup AS5311 chip
 
   if (flag) {
     pinMode(23, OUTPUT);
@@ -111,7 +115,7 @@ void loop()
   // Check to see if button was pressed for LED indicator
   verify_LED_button();
 
-  //-------------------DATA MANAGEMENT-------------------------------------------------------
+  //-------------------------------- DATA MANAGEMENT ----------------------------------------------
   int average = measure_average();
   uint32_t errorBits = getErrorBits(CLK, CS, DO);
   
@@ -132,7 +136,7 @@ void loop()
     differenceMicro = distanceMicro - prevMicro;
 
   Loom.measure();
-	Loom.package();
+  Loom.package();
 
   Loom.add_data("AS5311", "Serial_Value", average);
   Loom.add_data("Displacement_mm", "mm", distance);
@@ -142,15 +146,15 @@ void loop()
 
   // Logs the status of the magnet position (whether the data is good or not) {Green = Good readings, Red = Bad readings}
   // Ignores the parity bit (last bit)
-  if (errorBits >= 16 && errorBits <= 18) // Error bits: 10000, 10001, 10010
+  if (errorBits >= 16 && errorBits <= 18)          // Error bits: 10000, 10001, 10010
     Loom.add_data("Status", "Color", "Green");
-  else if (errorBits == 19) // Error bits: 10011
+  else if (errorBits == 19)                        // Error bits: 10011
     Loom.add_data("Status", "Color", "Yellow");
-  else if (errorBits == 23) // Error bits: 10111
+  else if (errorBits == 23)                        // Error bits: 10111
     Loom.add_data("Status", "Color", "Red");
-  else if (errorBits < 16) // If OCF Bit is 0
+  else if (errorBits < 16)                         // If OCF Bit is 0
     Loom.add_data("Status", "Color", "OCF_Error");
-  else if (errorBits > 24) // If COF Bit is 1
+  else if (errorBits > 24)                         // If COF Bit is 1
     Loom.add_data("Status", "Color", "COF_Error");
   else
     Loom.add_data("Status", "Color", "Other_Error");
@@ -166,20 +170,25 @@ void loop()
 
   Loom.add_data("VPD", "VPD", VPD);
 
-  //float rssi = Loom.LoRa().get_signal_strength();
-  //Loom.add_data("RSSI", "RSSI", rssi);
+//  float rssi = Loom.LoRa().get_signal_strength(); // Not in Loom 2.5.1
+//  Loom.add_data("RSSI", "RSSI", rssi);
 
   prev = distance;
   prevMicro = distanceMicro;
-//-----------------------------------------------------------------------------------
+  
+  //-----------------------------------------------------------------------------------
 
-	Loom.display_data();
+  Loom.display_data();
 
   // Log SD in case it doesn't send
-  Loom.SDCARD().log();
+  Loom.log_all();
+  counter++;
   
-	// Send to address 1
-  Loom.LoRa().send(1);
+	// Send to address 1 after 10 data packets
+  if (counter % max_packets == 0) {
+    Loom.LoRa().send_batch(1,4000);
+    counter = 0;
+  }
   
   Loom.InterruptManager().RTC_alarm_duration(TimeSpan(0, 0, DELAY_IN_MINUTES, DELAY_IN_SECONDS));
   Loom.InterruptManager().reconnect_interrupt(RTC_INT_PIN);

@@ -1,15 +1,15 @@
 "{\
-	'general':\
-	{\
-		'name':'Device',\
-		'instance':1,\
-		'interval':2000\
-	},\
+  'general':\
+  {\
+    'name':'Dendro',\
+    'instance':1,\
+    'interval':2000\
+  },\
 	'components':[\
-		{\
-			'name':'Analog',\
-			'params':[8,12,false,false,false,false,false,false,0,0,0,0,0,0,25]\
-		},\
+    {\
+      'name':'Analog',\
+      'params':[8,12,false,false,false,false,false,false,0,0,0,0,0,0,25]\
+    },\
     {\
       'name':'SHT31D',\
       'params':'default'\
@@ -31,18 +31,22 @@
       'params':[true,1000,10,'dend',true]\
     },\
     {\
+      'name':'BatchSD',\
+      'params':[true,1000,10]\
+    },\
+    {\
       'name':'Neopixel',\
       'params':'default'\
     },\
-		{\
-			'name':'LoRa',\
-			'params':[\
-				255,\
-				0,\
-				23,\
-				15,\
-				500\
-			]\
-		}\
-	]\
+    {\
+      'name':'LoRa',\
+      'params':[\
+        255,\
+        2,\
+        23,\
+        15,\
+        500\
+      ]\
+    }\
+  ]\
 }"

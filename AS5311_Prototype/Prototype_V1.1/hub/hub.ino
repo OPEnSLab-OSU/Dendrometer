@@ -16,32 +16,21 @@ LoomFactory<
 
 LoomManager Loom{ &ModuleFactory };
 
-float rssi;
-
 void setup() {
   
-  pinMode(5, OUTPUT);    // Enable control of 3.3V rail
-  pinMode(6, OUTPUT);   // Enable control of 5V rail
-  digitalWrite(5, LOW); // Enable 3.3V rail
-  digitalWrite(6, HIGH);  // Enable 5V rail
-  
-	Loom.begin_serial();
-	Loom.parse_config(json_config);
-	Loom.print_config();
+  Loom.begin_serial();
+  Loom.parse_config(json_config);
+  Loom.print_config();
 
-	LPrintln("\n ** Setup Complete ** ");
-	LPrintln("\n Looping... Please ignore recieve failure messages");
+  LPrintln("\n ** Setup Complete ** ");
+  LPrintln("\n Looping... Please ignore recieve failure messages");
 }
 
 void loop() 
 {	
-	if (Loom.LoRa().receive_blocking(10000)) {
-		Loom.display_data();
-    //rssi = Loom.LoRa().get_signal_strength();
-    //LPrintln("RSSI: " + String(rssi));
-    //Loom.SDCARD().log();
-		if(!Loom.GoogleSheets().publish()) {
-                Serial.println("failed to print to Gsheets");
-    }
-	}
+  if (Loom.LoRa().receive_batch_blocking(5000)) {
+    Loom.display_data();
+	  if(!Loom.GoogleSheets().publish_batch())
+      Serial.println("failed to print to Gsheets");
+  }
 }
