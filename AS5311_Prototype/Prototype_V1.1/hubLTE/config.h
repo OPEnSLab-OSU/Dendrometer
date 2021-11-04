@@ -1,36 +1,39 @@
 "{\
-	'general':\
-	{\
-		'name':'Device',\
-		'instance':1\
-	},\
-	'components':[\
-		{\
-			'name':'LoRa',\
-			'params':[255,1,23,3,200]\
-		},\
+  'general':\
+  {\
+    'name':'Device',\
+    'instance':1\
+  },\
+  'components':[\
     {\
      'name':'LTE',\
-      'params':['hologram','','','A5']\
+     'params':['hologram','','','A5']\
+    },\
+    {\
+      'name':'LoRa',\
+      'params':[255,0,23,7,500]\
+    },\
+    {\
+      'name':'DS3231',\
+      'params':'default'\
+    },\
+    {\
+      'name':'SD',\
+      'params':[true,1000,11,'hub',false]\
+    },\
+    {\
+    'name':'BatchSD',\
+    'params': [true,1000,11]\
     },\
     {\
       'name':'GoogleSheets',\
       'params':[\
         'Goog',\
-        7003,\
-        '/macros/s/AKfycbz4FDWcWILelj6wwShxXRDyyXOWeiYMZ6KqAjM9f4AW_DukHMMZ/exec',\
-        '1hVE12IatRQ3P8pAppXuwFszosDbhLLTj-kEZtR2gL3o',\
+        '/macros/s/AKfycbzySpouxdaHYh6f1e7DI24i4s8XTGDe-X6d-9uaR7HVrpFNWUt7/exec',\
+        '11bmZETLyFutZHwZRrpmsNFy0VrWmJ-myskjLZ6cZS-w',\
 /*true to autoname tab*/        true,\
-/*not used if previous param is true*/  ''\
+/*not used if previous param is true*/  'testTab'\
       ]\
-    },\
-		{\
-			'name':'SD',\
-			'params':[true,1000,10,'dend',true]\
-		},\
-    {\
-      'name':'BatchSD',\
-      'params': [true, 1000, 10]\
     }\
-	]\
+  ]\
 }"

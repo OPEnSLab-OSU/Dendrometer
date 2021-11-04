@@ -28,11 +28,11 @@
     },\
     {\
       'name':'SD',\
-      'params':[true,1000,10,'dend',true]\
+      'params':[true,1000,11,'dend',true]\
     },\
     {\
       'name':'BatchSD',\
-      'params':[true,1000,10]\
+      'params':[true,1000,11]\
     },\
     {\
       'name':'Neopixel',\
@@ -42,9 +42,9 @@
       'name':'LoRa',\
       'params':[\
         255,\
-        2,\
+        1,\
         23,\
-        15,\
+        7,\
         500\
       ]\
     }\

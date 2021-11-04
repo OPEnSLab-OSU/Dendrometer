@@ -6,27 +6,30 @@ const char* json_config =
 #include "config.h"
 ;
 
-// Set enabled modules
-LoomFactory<
-	Enable::Internet::Disabled,
-	Enable::Sensors::Enabled,
-	Enable::Radios::Enabled,
-	Enable::Actuators::Enabled,
-	Enable::Max::Disabled
-> ModuleFactory{};
+// In Tools menu, set:
+// Internet  > Disabled
+// Sensors   > Enabled
+// Radios    > Enabled
+// Actuators > Enabled
+// Max       > Disabled
 
-LoomManager Loom{ &ModuleFactory };
+using namespace Loom;
+
+Loom::Manager Feather{};
 
 //Pins
-#define CS 9
+#define CS A3
 #define CLK A5
 #define DO A4
 #define LED A2
 
 #define DELAY_IN_SECONDS 0
 #define DELAY_IN_MINUTES 15
-#define INT_BUT 11
+#define INT_BUT A1
 #define RTC_INT_PIN 12
+
+#define HYPNOS3 5
+//#define HYPNOS5 6
  
 //Global Variables
 volatile bool flag = false;   // Interrupt flag
@@ -44,16 +47,18 @@ void setup()
   // Enable waiting for RTC interrupt, MUST use a pullup since signal is active low
   pinMode(RTC_INT_PIN, INPUT_PULLUP);  
   pinMode(INT_BUT, INPUT_PULLUP);
-  pinMode(5, OUTPUT);    // Enable control of 3.3V rail
-  pinMode(6, OUTPUT);   // Enable control of 5V rail
+  pinMode(HYPNOS3, OUTPUT);    // Enable control of 3.3V rail
+  //pinMode(HYPNOS5, OUTPUT);   // Enable control of 5V rail
+  pinMode(13, OUTPUT);
 
   // Initialize Hypnos
-  digitalWrite(5, LOW); // Enable 3.3V rail
-  digitalWrite(6, HIGH);  // Enable 5V rail
+  digitalWrite(HYPNOS3, LOW); // Enable 3.3V rail
+  //digitalWrite(HYPNOS5, HIGH);  // Enable 5V rail
+  digitalWrite(13, HIGH);
 
-  Loom.begin_serial(true);
-  Loom.parse_config(json_config);
-  Loom.print_config();
+  Feather.begin_serial(true);
+  Feather.parse_config(json_config);
+  Feather.print_config();
 
   // Begin Communication with AS5311
   init_AS();
@@ -66,10 +71,10 @@ void setup()
   
   // Flash three times for verification
   green_flash();
-
-  Loom.InterruptManager().register_ISR(RTC_INT_PIN, ISR_pin12, LOW, ISR_Type::IMMEDIATE);
-  Loom.InterruptManager().register_ISR(INT_BUT, ISR_pin11, LOW, ISR_Type::IMMEDIATE);
-  delay(5000);
+ 
+  getInterruptManager(Feather).register_ISR(RTC_INT_PIN, ISR_pin12, LOW, ISR_Type::IMMEDIATE);
+  getInterruptManager(Feather).register_ISR(INT_BUT, ISR_pin11, LOW, ISR_Type::IMMEDIATE);
+  delay(500);
   
   // Starting measurement of AS5311
   serial_init_measure();
@@ -77,7 +82,7 @@ void setup()
   // Save 2 most significant bits of start
   prevTwoSig = start & 0xC00;
   
-  Loom.Neopixel().set_color(2, 0, 0, 0, 0); // Turns off Neopixel
+  getNeopixel(Feather).set_color(2, 0, 0, 0, 0); // Turns off Neopixel
 
   LPrintln("\n ** Setup Complete ** ");
 }
@@ -85,11 +90,12 @@ void setup()
 void loop() 
 {
   // Initialize Hypnos
-  digitalWrite(5, LOW); // Enable 3.3V rail
-  digitalWrite(6, HIGH);  // Enable 5V rail
+  digitalWrite(HYPNOS3, LOW); // Enable 3.3V rail
+  //digitalWrite(HYPNOS5, HIGH);  // Enable 5V rail
+  digitalWrite(13, HIGH);
 
   delay(100);
-  
+
   // Protocol to turn on AS5311
   pinMode(CS, OUTPUT);
   pinMode(CLK, OUTPUT);
@@ -107,9 +113,9 @@ void loop()
   if (flag) {
     pinMode(23, OUTPUT);
     pinMode(24, OUTPUT);
-    pinMode(10, OUTPUT);
+    pinMode(11, OUTPUT);
   
-    Loom.power_up();
+    Feather.power_up();
   }
 
   // Check to see if button was pressed for LED indicator
@@ -135,84 +141,87 @@ void loop()
   if (distanceMicro != prevMicro)
     differenceMicro = distanceMicro - prevMicro;
 
-  Loom.measure();
-  Loom.package();
+  Feather.measure();
+  Feather.package();
 
-  Loom.add_data("AS5311", "Serial_Value", average);
-  Loom.add_data("Displacement_mm", "mm", distance);
-  Loom.add_data("Displacement_um", "um", distanceMicro);
-  Loom.add_data("Difference_mm", "mm", difference);
-  Loom.add_data("Difference_um", "um", differenceMicro);
+  Feather.add_data("AS5311", "Serial_Value", average);
+  Feather.add_data("Displacement_mm", "mm", distance);
+  Feather.add_data("Displacement_um", "um", distanceMicro);
+  Feather.add_data("Difference_mm", "mm", difference);
+  Feather.add_data("Difference_um", "um", differenceMicro);
 
   // Logs the status of the magnet position (whether the data is good or not) {Green = Good readings, Red = Bad readings}
   // Ignores the parity bit (last bit)
+  
   if (errorBits >= 16 && errorBits <= 18)          // Error bits: 10000, 10001, 10010
-    Loom.add_data("Status", "Color", "Green");
+    Feather.add_data("Status", "Color", "Green");
   else if (errorBits == 19)                        // Error bits: 10011
-    Loom.add_data("Status", "Color", "Yellow");
+    Feather.add_data("Status", "Color", "Yellow");
   else if (errorBits == 23)                        // Error bits: 10111
-    Loom.add_data("Status", "Color", "Red");
+    Feather.add_data("Status", "Color", "Red");
   else if (errorBits < 16)                         // If OCF Bit is 0
-    Loom.add_data("Status", "Color", "OCF_Error");
+    Feather.add_data("Status", "Color", "OCF_Error");
   else if (errorBits > 24)                         // If COF Bit is 1
-    Loom.add_data("Status", "Color", "COF_Error");
+    Feather.add_data("Status", "Color", "COF_Error");
   else
-    Loom.add_data("Status", "Color", "Other_Error");
-
-  float temp, humidity, SVP, VPD;
+    Feather.add_data("Status", "Color", "Other_Error");
+  
+  float temp, humid, SVP, VPD;
 
   float e = 2.71828;
 
-  temp = Loom.SHT31D().get_temperature();
-  humidity = Loom.SHT31D().get_humidity();
+  temp = Feather.get<Loom::SHT31D>()->get_temperature();
+  humid = Feather.get<Loom::SHT31D>()->get_humid();
+  
   SVP = (0.61078 * pow(e, (17.2694 * temp) / (temp + 237.3)));
-  VPD = SVP * (1 - (humidity / 100));
+  VPD = SVP * (1 - (humid / 100));
 
-  Loom.add_data("VPD", "VPD", VPD);
+  Feather.add_data("VPD", "VPD", VPD);
 
-//  float rssi = Loom.LoRa().get_signal_strength(); // Not in Loom 2.5.1
-//  Loom.add_data("RSSI", "RSSI", rssi);
+  float rssi = Feather.get<Loom::LoRa>()->get_signal_strength();
+  Feather.add_data("RSSI", "RSSI", rssi);
 
   prev = distance;
   prevMicro = distanceMicro;
-  
   //-----------------------------------------------------------------------------------
 
-  Loom.display_data();
+  Feather.display_data();
 
   // Log SD in case it doesn't send
-  Loom.log_all();
+  Feather.log_all();
   counter++;
-  
-	// Send to address 1 after 10 data packets
+
+  // Send to address 0 after 10 data packets
   if (counter % max_packets == 0) {
-    Loom.LoRa().send_batch(1,4000);
+    getLoRa(Feather).send_batch(0,4000);
     counter = 0;
-  }
-  
-  Loom.InterruptManager().RTC_alarm_duration(TimeSpan(0, 0, DELAY_IN_MINUTES, DELAY_IN_SECONDS));
-  Loom.InterruptManager().reconnect_interrupt(RTC_INT_PIN);
-  Loom.InterruptManager().reconnect_interrupt(INT_BUT);
+  } 
 
-  Loom.power_down();
+  getInterruptManager(Feather).RTC_alarm_duration(TimeSpan(0,0,DELAY_IN_MINUTES,DELAY_IN_SECONDS));
+  getInterruptManager(Feather).reconnect_interrupt(RTC_INT_PIN);
+  getInterruptManager(Feather).reconnect_interrupt(INT_BUT);
 
-  // Protocol to shut down SD
-  pinMode(23, INPUT);
-  pinMode(24, INPUT);
-  pinMode(10, INPUT);
-  
+  Feather.power_down();
+
   // Protocol to shut down AS5311
   pinMode(CLK, INPUT);
   pinMode(DO, INPUT);
   pinMode(CS, INPUT);
 
-  pinMode(LED, INPUT); // Turns off Neopixel
+  // Protocol to shut off Neopixel
+  pinMode(LED, INPUT); 
 
   // Protocol to turn off Hypnos
-  digitalWrite(5, HIGH); // Disabling all pins before going to sleep.
-  digitalWrite(6, LOW);
+  digitalWrite(13, LOW);
+  digitalWrite(HYPNOS3, HIGH);
+  //digitalWrite(HYPNOS5, LOW); 
 
-  Loom.SleepManager().sleep();
+  // Protocol to shut down SD
+  pinMode(23, INPUT);
+  pinMode(24, INPUT);
+  pinMode(11, INPUT);
+  
+  getSleepManager(Feather).sleep();
   while (!flag);
 }
 
@@ -246,21 +255,21 @@ void serial_init_measure(){
   start /= 16; 
 }
 
-// LED Functions
+// Lights up LED is interrupt button is pressed
 void verify_LED_button(){
   if (button)
   {
     uint32_t ledCheck = getErrorBits(CLK, CS, DO);
 
     if (ledCheck >= 16 && ledCheck <= 18)
-      Loom.Neopixel().set_color(2, 0, 200, 0, 0); // Green
+      getNeopixel(Feather).set_color(2, 0, 200, 0, 0); // Green
     else if (ledCheck == 19)
-      Loom.Neopixel().set_color(2, 0, 200, 200, 0); // Yellow
+      getNeopixel(Feather).set_color(2, 0, 200, 200, 0); // Yellow
     else
-      Loom.Neopixel().set_color(2, 0, 0, 200, 0); // Red
+      getNeopixel(Feather).set_color(2, 0, 0, 200, 0); // Red
 
     delay(3000);
-    Loom.Neopixel().set_color(2, 0, 0, 0, 0);
+    getNeopixel(Feather).set_color(2, 0, 0, 0, 0);
   }
   flag = false;
   button = false;
@@ -273,9 +282,9 @@ void verify_position(){
   while (ledCheck < 16 || ledCheck > 18)
   {
     if (ledCheck == 19)
-      Loom.Neopixel().set_color(2, 0, 200, 200, 0); // Changes Neopixel to yellow
+      getNeopixel(Feather).set_color(2, 0, 200, 200, 0); // Changes Neopixel to yellow
     else
-      Loom.Neopixel().set_color(2, 0, 0, 200, 0); // Changes Neopixel to red
+      getNeopixel(Feather).set_color(2, 0, 0, 200, 0); // Changes Neopixel to red
 
     delay(3000); // Gives user 3 seconds to adjust magnet before next reading
     ledCheck = getErrorBits(CLK, CS, DO);
@@ -287,10 +296,10 @@ void green_flash(){
   for (int i = 0; i < 3; i++)
   {
 
-    Loom.Neopixel().set_color(2, 0, 200, 0, 0); // Changes Neopixel to green
+    getNeopixel(Feather).set_color(2, 0, 200, 0, 0); // Changes Neopixel to green
     delay(500);
 
-    Loom.Neopixel().set_color(2, 0, 0, 0, 0); // Turns off Neopixel
+    getNeopixel(Feather).set_color(2, 0, 0, 0, 0); // Turns off Neopixel
     delay(500);
   }
 }
