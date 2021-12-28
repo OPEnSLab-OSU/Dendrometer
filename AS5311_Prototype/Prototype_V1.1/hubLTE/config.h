@@ -1,7 +1,7 @@
 "{\
   'general':\
   {\
-    'name':'Device',\
+    'name':'hub',\
     'instance':1\
   },\
   'components':[\
@@ -19,11 +19,7 @@
     },\
     {\
       'name':'SD',\
-      'params':[true,1000,11,'hub',false]\
-    },\
-    {\
-    'name':'BatchSD',\
-    'params': [true,1000,11]\
+      'params':[true,1000,11,'hub',true]\
     },\
     {\
       'name':'GoogleSheets',\

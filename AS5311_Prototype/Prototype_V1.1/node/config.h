@@ -19,20 +19,16 @@
       'params':[10, false, true]\
     },\
     {\
-      'name':'Interrupt_Manager',\
+      'name':'InterruptManager',\
       'params':[0]\
     },\
     {\
-      'name':'Sleep_Manager',\
+      'name':'SleepManager',\
       'params':[true,false,1]\
     },\
     {\
       'name':'SD',\
       'params':[true,1000,11,'dend',true]\
-    },\
-    {\
-      'name':'BatchSD',\
-      'params':[true,1000,11]\
     },\
     {\
       'name':'Neopixel',\

@@ -2,7 +2,7 @@
   'general':\
   {\
     'name':'Device',\
-    'instance':1,\
+    'instance':1\
   },\
   'components':[\
     {\
@@ -12,10 +12,6 @@
     {\
      'name':'SD',\
      'params':[true,1000,11,'hub',true]\
-    },\
-    {\
-     'name':'BatchSD',\
-     'params':[true,1000,11]\
     },\
     {\
       'name':'GoogleSheets',\

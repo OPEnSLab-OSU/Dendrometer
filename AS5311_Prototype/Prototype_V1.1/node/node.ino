@@ -39,8 +39,6 @@ uint32_t prevTwoSig = 0;
 float elapsed = 0;
 float prev = 0;
 float prevMicro = 0;
-const int max_packets = 10; // Number of packets collected before sending through LoRa
-int counter = 0;
 
 void setup() 
 {
@@ -188,14 +186,10 @@ void loop()
   Feather.display_data();
 
   // Log SD in case it doesn't send
-  Feather.log_all();
-  counter++;
+  getSD(Feather).log();
 
-  // Send to address 0 after 10 data packets
-  if (counter % max_packets == 0) {
-    getLoRa(Feather).send_batch(0,4000);
-    counter = 0;
-  } 
+  // Send data to address 0
+  getLoRa(Feather).send(0);
 
   getInterruptManager(Feather).RTC_alarm_duration(TimeSpan(0,0,DELAY_IN_MINUTES,DELAY_IN_SECONDS));
   getInterruptManager(Feather).reconnect_interrupt(RTC_INT_PIN);

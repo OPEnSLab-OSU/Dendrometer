@@ -33,10 +33,11 @@ void setup()
 
 void loop()
 {
-  if (getLoRa(Feather).receive_batch_blocking(5000)) {
+  if (getLoRa(Feather).receive_blocking(5000)) {
     Feather.display_data();
     getSD(Feather).log();
     getGoogleSheets(Feather).print_config();
-    getGoogleSheets(Feather).publish_batch();
+    getGoogleSheets(Feather).publish();
   }
+  
 }
