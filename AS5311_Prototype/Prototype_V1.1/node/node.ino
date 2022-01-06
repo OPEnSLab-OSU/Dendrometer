@@ -164,6 +164,8 @@ void loop()
   else
     Feather.add_data("Status", "Color", "Other_Error");
   
+  // Calculate VPD based on temperature and humidity
+
   float temp, humid, SVP, VPD;
 
   float e = 2.71828;
@@ -175,6 +177,8 @@ void loop()
   VPD = SVP * (1 - (humid / 100));
 
   Feather.add_data("VPD", "VPD", VPD);
+
+  // Log RSSI value from LoRa communication
 
   float rssi = Feather.get<Loom::LoRa>()->get_signal_strength();
   Feather.add_data("RSSI", "RSSI", rssi);
