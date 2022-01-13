@@ -183,6 +183,8 @@ void loop()
   float rssi = Feather.get<Loom::LoRa>()->get_signal_strength();
   Feather.add_data("RSSI", "RSSI", rssi);
 
+  Feather.add_data("Button", "Pressed?", button);
+
   prev = distance;
   prevMicro = distanceMicro;
   //-----------------------------------------------------------------------------------
@@ -194,6 +196,8 @@ void loop()
 
   // Send data to address 0
   getLoRa(Feather).send(0);
+
+  flag = false, button = false;
 
   getInterruptManager(Feather).RTC_alarm_duration(TimeSpan(0,0,DELAY_IN_MINUTES,DELAY_IN_SECONDS));
   getInterruptManager(Feather).reconnect_interrupt(RTC_INT_PIN);
@@ -269,8 +273,6 @@ void verify_LED_button(){
     delay(3000);
     getNeopixel(Feather).set_color(2, 0, 0, 0, 0);
   }
-  flag = false;
-  button = false;
 }
 
 // Ensures that magnet starts in good position before continuing program
