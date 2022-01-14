@@ -180,6 +180,7 @@ void loop()
   float rssi = Feather.get<Loom::LoRa>()->get_signal_strength();
   Feather.add_data("RSSI", "RSSI", rssi);
 
+  // Log whether system woke up from button or not
   Feather.add_data("Button", "Pressed?", button);
 
   prev = distance;
@@ -194,6 +195,7 @@ void loop()
   // Send data to address 0
   getLoRa(Feather).send(0);
 
+  // Resetting interrupt
   flag = false, button = false;
 
   getInterruptManager(Feather).RTC_alarm_duration(TimeSpan(0,0,DELAY_IN_MINUTES,DELAY_IN_SECONDS));
