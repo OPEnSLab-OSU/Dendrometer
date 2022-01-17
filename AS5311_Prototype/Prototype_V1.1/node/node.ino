@@ -106,7 +106,6 @@ void loop()
 
   // Initialize magnet sensor  
   init_AS();
-  delay(2000); // Warmup AS5311 chip
 
   if (flag) {
     pinMode(23, OUTPUT);
