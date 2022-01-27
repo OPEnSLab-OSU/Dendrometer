@@ -70,8 +70,8 @@ void setup()
   // Flash three times for verification
   green_flash();
  
-  getInterruptManager(Feather).register_ISR(RTC_INT_PIN, ISR_pin12, LOW, ISR_Type::IMMEDIATE);
-  getInterruptManager(Feather).register_ISR(INT_BUT, ISR_pin11, LOW, ISR_Type::IMMEDIATE);
+  getInterruptManager(Feather).register_ISR(RTC_INT_PIN, ISR_RTC, LOW, ISR_Type::IMMEDIATE);
+  getInterruptManager(Feather).register_ISR(INT_BUT, ISR_BUT, LOW, ISR_Type::IMMEDIATE);
   delay(500);
   
   // Starting measurement of AS5311
@@ -80,7 +80,8 @@ void setup()
   // Save 2 most significant bits of start
   prevTwoSig = start & 0xC00;
   
-  getNeopixel(Feather).set_color(2, 0, 0, 0, 0); // Turns off Neopixel
+  // Turns off Neopixel
+  getNeopixel(Feather).set_color(2, 0, 0, 0, 0); 
 
   LPrintln("\n ** Setup Complete ** ");
 }
@@ -118,7 +119,8 @@ void loop()
   // Check to see if button was pressed for LED indicator
   verify_LED_button();
 
-  //-------------------------------- DATA MANAGEMENT ----------------------------------------------
+  // --- Data Management Begin --- 
+
   int average = measure_average();
   uint32_t errorBits = getErrorBits(CLK, CS, DO);
   
@@ -131,7 +133,7 @@ void loop()
   float difference = 0;
   float differenceMicro = 0;
 
-  // Reads the movement if any, else it sets the changed distance to 0
+  // Reads the movement if any, else it sets the distance to 0
   if (distance != prev)
     difference = distance - prev;
 
@@ -149,6 +151,8 @@ void loop()
 
   // Logs the status of the magnet position (whether the data is good or not) {Green = Good readings, Red = Bad readings}
   // Ignores the parity bit (last bit)
+  // Datasheet: https://www.mouser.com/pdfdocs/AS5311_Datasheet_EN_v6-914614.pdf
+  // Read sections 7.3 and 7.5 of datasheet for more information on error bit values
   
   if (errorBits >= 16 && errorBits <= 18)          // Error bits: 10000, 10001, 10010
     Feather.add_data("Status", "Color", "Green");
@@ -184,7 +188,8 @@ void loop()
 
   prev = distance;
   prevMicro = distanceMicro;
-  //-----------------------------------------------------------------------------------
+
+  // --- Data Management End ---
 
   Feather.display_data();
 
@@ -225,9 +230,10 @@ void loop()
   while (!flag);
 }
 
-//AS5311 functions
+// --- AS5311 functions ---
+
+// Protocol to turn on AS5311
 void init_AS(){
-  // Protocol to turn on AS5311
   pinMode(CS, OUTPUT);
   pinMode(CLK, OUTPUT);
   pinMode(DO, INPUT_PULLUP);
@@ -236,6 +242,7 @@ void init_AS(){
   delay(2000);
 }
 
+// Takes 16 data measurements and averages them for normal reading
 int measure_average(){
   int average = 0;
   for (int j = 0; j < 16; j++)
@@ -246,7 +253,7 @@ int measure_average(){
   return average;
 }
 
-// Takes 16 measurements and averages them for the starting Serial value (0-4095 value)
+// Takes 16 measurements and averages them for the starting serial value (0-4095 value)
 void serial_init_measure(){
   for (int j = 0; j < 16; j++)
   {
@@ -255,21 +262,21 @@ void serial_init_measure(){
   start /= 16; 
 }
 
-// Lights up LED is interrupt button is pressed
+// Lights up LED if interrupt button is pressed
 void verify_LED_button(){
   if (button)
   {
     uint32_t ledCheck = getErrorBits(CLK, CS, DO);
 
     if (ledCheck >= 16 && ledCheck <= 18)
-      getNeopixel(Feather).set_color(2, 0, 200, 0, 0); // Green
+      getNeopixel(Feather).set_color(2, 0, 200, 0, 0);   // Green
     else if (ledCheck == 19)
       getNeopixel(Feather).set_color(2, 0, 200, 200, 0); // Yellow
     else
-      getNeopixel(Feather).set_color(2, 0, 0, 200, 0); // Red
+      getNeopixel(Feather).set_color(2, 0, 0, 200, 0);   // Red
 
     delay(3000);
-    getNeopixel(Feather).set_color(2, 0, 0, 0, 0);
+    getNeopixel(Feather).set_color(2, 0, 0, 0, 0);       // LED Off
   }
 }
 
@@ -302,14 +309,17 @@ void green_flash(){
   }
 }
 
-// Interrupt Functions
-void ISR_pin12()
+// --- Interrupt Functions ---
+
+// RTC interrupt
+void ISR_RTC()
 {
   detachInterrupt(RTC_INT_PIN);
   flag = true;
 }
 
-void ISR_pin11()
+// Button interrupt
+void ISR_BUT()
 {
   detachInterrupt(INT_BUT);
   flag = true;
