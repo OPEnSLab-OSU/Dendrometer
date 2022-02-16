@@ -40,6 +40,10 @@ float elapsed = 0;
 float prev = 0;
 float prevMicro = 0;
 
+int loopCounter = 0;          // How many times the program wakes up
+int loraCount = 16;           // How many packets it takes to transmit through LoRa
+                              // { 4 loops = 1 hour; 16 loops = 4 hours }
+
 void setup() 
 {
   // Enable waiting for RTC interrupt, MUST use a pullup since signal is active low
@@ -196,8 +200,13 @@ void loop()
   // Log SD in case it doesn't send
   getSD(Feather).log();
 
-  // Send data to address 0
-  getLoRa(Feather).send(0);
+  loopCounter++;
+
+  // Send data to address 0 after set amount of packets
+  if (loopCounter == loraCount) {
+    getLoRa(Feather).send(0);
+    loopCounter = 0;
+  }
 
   // Resetting interrupt
   flag = false, button = false;
