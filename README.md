@@ -23,7 +23,7 @@ Drawings and mechanical design files for the carbon fiber Dendrometer mechanical
 ### PCB: 
 Printed circuit board (PCB) files for both the hub and node. 
 ### Potentiometer_Prototype: 
-[OUTDATED] Code and pictures of potentiometer Dendrometer design
+[OUTDATED] Code and pictures of potentiometer Dendrometer design.
 
 ## Relevant Documents
   - [Build Guide](https://docs.google.com/document/d/1UgnCFajMevp0Vaihs5oVVA03wMTq4PARM_in11W46gY/edit?usp=sharing)
