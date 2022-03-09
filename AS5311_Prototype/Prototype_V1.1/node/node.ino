@@ -1,5 +1,8 @@
 #include <Loom.h>
 #include "AS5311.h"
+#include <Arduino.h>
+#include <Wire.h>
+#include "Adafruit_SHT31.h"
 
 // Include configuration
 const char* json_config = 
@@ -30,6 +33,8 @@ Loom::Manager Feather{};
 
 #define HYPNOS3 5
 //#define HYPNOS5 6
+
+Adafruit_SHT31 sht31 = Adafruit_SHT31(); 
  
 //Global Variables
 volatile bool flag = false;   // Interrupt flag
@@ -40,7 +45,7 @@ float elapsed = 0;
 float prev = 0;
 float prevMicro = 0;
 
-int loopCounter = 0;          // How many times the program wakes up
+int loopCounter = 14;         // LoRa counter
 int loraCount = 16;           // How many packets it takes to transmit through LoRa
                               // { 4 loops = 1 hour; 16 loops = 4 hours }
 
@@ -64,6 +69,11 @@ void setup()
 
   // Begin Communication with AS5311
   init_AS();
+
+  // Instantiate SHT30 outside of Loom
+  if (! sht31.begin(0x44)) {   
+    Serial.println("Couldn't find SHT31");
+  }
 
   // LED pin set
   pinMode(LED, OUTPUT);
@@ -118,6 +128,8 @@ void loop()
     pinMode(11, OUTPUT);
   
     Feather.power_up();
+
+    sht31.begin(0x44);
   }
 
   // Check to see if button was pressed for LED indicator
@@ -145,6 +157,24 @@ void loop()
     differenceMicro = distanceMicro - prevMicro;
 
   Feather.measure();
+
+  // Read and print temperature and humidity values
+  float temp = sht31.readTemperature();
+  float humid = sht31.readHumidity();
+
+  if (! isnan(temp)) {  // check if 'is not a number'
+    Serial.print("Temp *C = "); Serial.println(temp);
+  } else { 
+    Serial.println("Failed to read temperature");
+  }
+  
+  if (! isnan(humid)) {  // check if 'is not a number'
+    Serial.print("Hum. % = "); Serial.println(humid);
+  } else { 
+    Serial.println("Failed to read humidity");
+  }
+  Serial.println();
+  
   Feather.package();
 
   Feather.add_data("AS5311", "Serial_Value", average);
@@ -172,15 +202,14 @@ void loop()
     Feather.add_data("Status", "Color", "Other_Error");
   
   // Calculate VPD based on temperature and humidity
-  float temp, humid, SVP, VPD;
+  float SVP, VPD;
   float e = 2.71828;
-
-  temp = Feather.get<Loom::SHT31D>()->get_temperature();
-  humid = Feather.get<Loom::SHT31D>()->get_humid();
   
   SVP = (0.61078 * pow(e, (17.2694 * temp) / (temp + 237.3)));
   VPD = SVP * (1 - (humid / 100));
 
+  Feather.add_data("Temp", "*C", temp);
+  Feather.add_data("Humid", "%RH", humid);
   Feather.add_data("VPD", "VPD", VPD);
 
   // Log RSSI value from LoRa communication

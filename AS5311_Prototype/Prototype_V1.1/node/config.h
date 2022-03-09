@@ -2,17 +2,13 @@
   'general':\
   {\
     'name':'Dendro',\
-    'instance':1,\
+    'instance':22,\
     'interval':2000\
   },\
 	'components':[\
     {\
       'name':'Analog',\
       'params':[8,12,false,false,false,false,false,false,0,0,0,0,0,0,25]\
-    },\
-    {\
-      'name':'SHT31D',\
-      'params':'default'\
     },\
     {\
       'name':'DS3231',\
@@ -38,7 +34,7 @@
       'name':'LoRa',\
       'params':[\
         255,\
-        1,\
+        22,\
         23,\
         7,\
         500\
