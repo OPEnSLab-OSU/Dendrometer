@@ -1,8 +1,8 @@
 "{\
   'general':\
   {\
-    'name':'Dendro',\
-    'instance':1,\
+    'name':'Dendro_LB_',\
+    'instance':3,\
     'interval':2000\
   },\
 	'components':[\
@@ -19,20 +19,16 @@
       'params':[10, false, true]\
     },\
     {\
-      'name':'Interrupt_Manager',\
+      'name':'InterruptManager',\
       'params':[0]\
     },\
     {\
-      'name':'Sleep_Manager',\
+      'name':'SleepManager',\
       'params':[true,false,1]\
     },\
     {\
       'name':'SD',\
       'params':[true,1000,10,'dend',true]\
-    },\
-    {\
-      'name':'BatchSD',\
-      'params':[true,1000,10]\
     },\
     {\
       'name':'Neopixel',\
@@ -42,9 +38,9 @@
       'name':'LoRa',\
       'params':[\
         255,\
-        2,\
+        3,\
         23,\
-        15,\
+        7,\
         500\
       ]\
     }\

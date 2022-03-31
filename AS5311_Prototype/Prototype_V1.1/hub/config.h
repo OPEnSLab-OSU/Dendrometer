@@ -1,23 +1,22 @@
 "{\
-	'general':\
-	{\
-		'name':'Device',\
-		'instance':1\
-	},\
-	'components':[\
+  'general':\
+  {\
+    'name':'Device',\
+    'instance':1\
+  },\
+  'components':[\
     {\
-      'name':'Digital',\
-      'params':'default'\
+      'name':'LoRa',\
+      'params':[255,0,23,3,200]\
     },\
-		{\
-			'name':'LoRa',\
-			'params':[255,1,23,3,200]\
-		},\
+    {\
+     'name':'SD',\
+     'params':[true,1000,11,'hub',true]\
+    },\
     {\
       'name':'GoogleSheets',\
       'params':[\
         'Goog',\
-        7001,\
         '/macros/s/AKfycbzySpouxdaHYh6f1e7DI24i4s8XTGDe-X6d-9uaR7HVrpFNWUt7/exec',\
         '11bmZETLyFutZHwZRrpmsNFy0VrWmJ-myskjLZ6cZS-w',\
 /*true to autoname tab*/        true,\
@@ -25,12 +24,12 @@
       ]\
     },\
     {\
-			'name':'Ethernet',\
-			'params':[\
-				'Ether1',\
-				[134,171,186,10,33,221],\
-				[192,168,0,1]\
-			]\
+      'name':'Ethernet',\
+      'params':[\
+        'Ether1',\
+        [134,171,186,10,33,221],\
+        [192,168,0,1]\
+      ]\
     }\
-	]\
+  ]\
 }"
