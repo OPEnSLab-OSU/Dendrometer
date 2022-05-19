@@ -2,7 +2,7 @@
   'general':\
   {\
     'name':'Dendro',\
-    'instance':22,\
+    'instance':21,\
     'interval':2000\
   },\
 	'components':[\
@@ -27,6 +27,10 @@
       'params':[true,1000,11,'dend',true]\
     },\
     {\
+      'name':'SHT31D',\
+      'params':'default'\
+    },\
+    {\
       'name':'Neopixel',\
       'params':'default'\
     },\
@@ -34,7 +38,7 @@
       'name':'LoRa',\
       'params':[\
         255,\
-        22,\
+        21,\
         23,\
         7,\
         500\
