@@ -2,7 +2,7 @@
   'general':\
   {\
     'name':'Dendro',\
-    'instance':1,\
+    'instance':21,\
     'interval':2000\
   },\
 	'components':[\
@@ -11,28 +11,24 @@
       'params':[8,12,false,false,false,false,false,false,0,0,0,0,0,0,25]\
     },\
     {\
-      'name':'SHT31D',\
-      'params':'default'\
-    },\
-    {\
       'name':'DS3231',\
       'params':[10, false, true]\
     },\
     {\
-      'name':'Interrupt_Manager',\
+      'name':'InterruptManager',\
       'params':[0]\
     },\
     {\
-      'name':'Sleep_Manager',\
+      'name':'SleepManager',\
       'params':[true,false,1]\
     },\
     {\
       'name':'SD',\
-      'params':[true,1000,10,'dend',true]\
+      'params':[true,1000,11,'dend',true]\
     },\
     {\
-      'name':'BatchSD',\
-      'params':[true,1000,10]\
+      'name':'SHT31D',\
+      'params':'default'\
     },\
     {\
       'name':'Neopixel',\
@@ -42,9 +38,9 @@
       'name':'LoRa',\
       'params':[\
         255,\
-        2,\
+        21,\
         23,\
-        15,\
+        7,\
         500\
       ]\
     }\

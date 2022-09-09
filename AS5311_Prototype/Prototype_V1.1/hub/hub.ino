@@ -1,36 +1,43 @@
 #include <Loom.h>
 
 // Include configuration
-const char* json_config = 
+const char* json_config =
 #include "config.h"
 ;
 
-// Set enabled modules
-LoomFactory<
-	Enable::Internet::Ethernet,
-	Enable::Sensors::Enabled,
-	Enable::Radios::Enabled,
-	Enable::Actuators::Disabled,
-	Enable::Max::Disabled
-> ModuleFactory{};
+// In Tools menu, set:
+// Internet  > Ethernet
+// Sensors   > Enabled
+// Radios    > Enabled
+// Actuators > Disabled
+// Max       > Disabled
 
-LoomManager Loom{ &ModuleFactory };
+using namespace Loom;
 
-void setup() {
+Loom::Manager Feather{};
+
+void setup()
+{
+  pinMode(5, OUTPUT);
+  digitalWrite(5, LOW); // Sets pin 5, the pin with the 3.3V rail, to output and enables the rail
+  pinMode(6, OUTPUT);
+  digitalWrite(6, HIGH); // Sets pin 6, the pin with the 5V rail, to output and enables the rail
   
-  Loom.begin_serial();
-  Loom.parse_config(json_config);
-  Loom.print_config();
+  Feather.begin_serial(true);
+  Feather.parse_config(json_config);
+  Feather.print_config();
 
   LPrintln("\n ** Setup Complete ** ");
-  LPrintln("\n Looping... Please ignore recieve failure messages");
 }
 
-void loop() 
-{	
-  if (Loom.LoRa().receive_batch_blocking(5000)) {
-    Loom.display_data();
-	  if(!Loom.GoogleSheets().publish_batch())
-      Serial.println("failed to print to Gsheets");
+
+void loop()
+{
+  if (getLoRa(Feather).receive_blocking(5000)) {
+    Feather.display_data();
+    getSD(Feather).log();
+    getGoogleSheets(Feather).print_config();
+    getGoogleSheets(Feather).publish();
   }
+  
 }
