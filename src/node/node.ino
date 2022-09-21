@@ -1,336 +1,261 @@
-#include <Loom.h>
+#include <Arduino.h>
+
+#include <Loom_Manager.h>
+
+#include <Hardware/Loom_Hypnos/Loom_Hypnos.h>
+#include <Hardware/Actuators/Loom_Neopixel/Loom_Neopixel.h>
+#include <Sensors/Loom_Analog/Loom_Analog.h>
+#include <Sensors/I2C/Loom_SHT31/Loom_SHT31.h>
+#include <Radio/Loom_LoRa/Loom_LoRa.h>
+
 #include "AS5311.h"
 
-// Include configuration
-const char* json_config = 
-#include "config.h"
-;
+static const uint8_t DENDROMETER_NODE_ID 123;
+static const int8_t MEASUREMENT_INTERVAL_MINUTES 15;
+static const int8_t MEASUREMENT_INTERVAL_SECONDS 0;
 
-// In Tools menu, set:
-// Internet  > Disabled
-// Sensors   > Enabled
-// Radios    > Enabled
-// Actuators > Enabled
-// Max       > Disabled
+// Pins
+#define AS5311_CS A3
+#define AS5311_CLK A5
+#define AS5311_DO A4
+#define LED_PIN A2
 
-using namespace Loom;
-
-Loom::Manager Feather{};
-
-//Pins
-#define CS A3
-#define CLK A5
-#define DO A4
-#define LED A2
-
-#define DELAY_IN_SECONDS 0
-#define DELAY_IN_MINUTES 15
-#define INT_BUT A1
+#define BUTTON_PIN A1
 #define RTC_INT_PIN 12
 
-#define HYPNOS3 5
-//#define HYPNOS5 6
- 
-//Global Variables
-volatile bool flag = false;   // Interrupt flag
-volatile bool button = false; // Check to see if button was pressed
-uint32_t start = 0;
-uint32_t prevTwoSig = 0;
-float elapsed = 0;
-float prev = 0;
-float prevMicro = 0;
+// Global Variables
+volatile bool buttonPressed = false; // Check to see if button was pressed
+uint32_t initialMeasurement = 0;
+//!!!uint32_t prevTwoSig = 0;
+//!!!!float elapsed = 0;
 
-int loopCounter = 14;         // LoRa counter
-int loraCount = 16;           // How many packets it takes to transmit through LoRa
-                              // { 4 loops = 1 hour; 16 loops = 4 hours }
+uint8_t loopCounter = 14;
+uint8_t loraTransmitInterval = 16; // to save power, only transmit a packet every X measurements
 
-void setup() 
-{
-  // Enable waiting for RTC interrupt, MUST use a pullup since signal is active low
-  pinMode(RTC_INT_PIN, INPUT_PULLUP);  
-  pinMode(INT_BUT, INPUT_PULLUP);
-  pinMode(HYPNOS3, OUTPUT);    // Enable control of 3.3V rail
-  //pinMode(HYPNOS5, OUTPUT);   // Enable control of 5V rail
-  pinMode(13, OUTPUT);
+Manager manager("Dendrometer", DENDROMETER_NODE_ID);
 
-  // Initialize Hypnos
-  digitalWrite(HYPNOS3, LOW); // Enable 3.3V rail
-  //digitalWrite(HYPNOS5, HIGH);  // Enable 5V rail
-  digitalWrite(13, HIGH);
+Loom_Hypnos hypnos(manager, HYPNOS_VERSION::V3_3, TIME_ZONE::PST);
 
-  Feather.begin_serial(true);
-  Feather.parse_config(json_config);
-  Feather.print_config();
+Loom_Analog analog(manager);
+Loom_SHT31 sht(manager);
+Loom_Neopixel statusLight(manager);
 
-  // Begin Communication with AS5311
-  init_AS();
+// Address: DENDROMETER_NODE_ID, power level: 23 Retry Count: 7, Timeout: 500
+Loom_LoRa lora(manager, DENDROMETER_NODE_ID, 23, 7, 500);
 
-  // LED pin set
-  pinMode(LED, OUTPUT);
+AS5311 magnetSensor(AS5311_CS, AS5311_CLK, AS5311_DO);
 
-  // Make sure the magnet is positioned correctly
-  verify_position();
-  
-  // Flash three times for verification
-  green_flash();
- 
-  getInterruptManager(Feather).register_ISR(RTC_INT_PIN, ISR_RTC, LOW, ISR_Type::IMMEDIATE);
-  getInterruptManager(Feather).register_ISR(INT_BUT, ISR_BUT, LOW, ISR_Type::IMMEDIATE);
-  delay(500);
-  
-  // Starting measurement of AS5311
-  serial_init_measure();
 
-  // Save 2 most significant bits of start
-  prevTwoSig = start & 0xC00;
-  
-  // Turns off Neopixel
-  getNeopixel(Feather).set_color(2, 0, 0, 0, 0); 
-
-  LPrintln("\n ** Setup Complete ** ");
-}
-
-void loop() 
-{
-  // Initialize Hypnos
-  digitalWrite(HYPNOS3, LOW); // Enable 3.3V rail
-  //digitalWrite(HYPNOS5, HIGH);  // Enable 5V rail
-  digitalWrite(13, HIGH);
-
-  delay(100);
-
-  // Protocol to turn on AS5311
-  pinMode(CS, OUTPUT);
-  pinMode(CLK, OUTPUT);
-  pinMode(DO, INPUT_PULLUP);
-  digitalWrite(CS, HIGH);
-  digitalWrite(CLK, LOW);
-
-  // Protocol to turn on Neopixel
-  pinMode(LED, OUTPUT);
-
-  // Initialize magnet sensor  
-  init_AS();
-
-  if (flag) {
-    pinMode(23, OUTPUT);
-    pinMode(24, OUTPUT);
-    pinMode(11, OUTPUT);
-  
-    Feather.power_up();
-  }
-
-  // Check to see if button was pressed for LED indicator
-  verify_LED_button();
-
-  // --- Data Management Begin --- 
-
-  int average = measure_average();
-  uint32_t errorBits = getErrorBits(CLK, CS, DO);
-  
-  // Also updates prevTwoSig to two most significant bits of first param, is being passed by ref
-  elapsed = computeElapsed(average, prevTwoSig, elapsed);
-
-  // Computes total distance in mm and um
-  float distance = (elapsed + ((2.0 * ((int)average - (int)start)) / 4095.0));
-  float distanceMicro = (elapsed * 1000) + ((2000 * ((int)average - (int)start)) / 4095.0);
-  float difference = 0;
-  float differenceMicro = 0;
-
-  // Reads the movement if any, else it sets the distance to 0
-  if (distance != prev)
-    difference = distance - prev;
-
-  if (distanceMicro != prevMicro)
-    differenceMicro = distanceMicro - prevMicro;
-
-  Feather.measure();
-  Feather.package();
-
-  Feather.add_data("AS5311", "Serial_Value", average);
-  Feather.add_data("Displacement_mm", "mm", distance);
-  Feather.add_data("Displacement_um", "um", distanceMicro);
-  Feather.add_data("Difference_mm", "mm", difference);
-  Feather.add_data("Difference_um", "um", differenceMicro);
-
-  // Logs the status of the magnet position (whether the data is good or not) {Green = Good readings, Red = Bad readings}
-  // Ignores the parity bit (last bit)
-  // Datasheet: https://www.mouser.com/pdfdocs/AS5311_Datasheet_EN_v6-914614.pdf
-  // Read sections 7.3 and 7.5 of datasheet for more information on error bit values
-  
-  if (errorBits >= 16 && errorBits <= 18)          // Error bits: 10000, 10001, 10010
-    Feather.add_data("Status", "Color", "Green");
-  else if (errorBits == 19)                        // Error bits: 10011
-    Feather.add_data("Status", "Color", "Yellow");
-  else if (errorBits == 23)                        // Error bits: 10111
-    Feather.add_data("Status", "Color", "Red");
-  else if (errorBits < 16)                         // If OCF Bit is 0
-    Feather.add_data("Status", "Color", "OCF_Error");
-  else if (errorBits > 24)                         // If COF Bit is 1
-    Feather.add_data("Status", "Color", "COF_Error");
-  else
-    Feather.add_data("Status", "Color", "Other_Error");
-  
-  // Calculate VPD based on temperature and humidity
-  float SVP, VPD, temp, humid;
-  float e = 2.71828;
-
-  temp = Feather.get<Loom::SHT31D>()->get_temperature();
-  humid = Feather.get<Loom::SHT31D>()->get_humid();
-  
-  SVP = (0.61078 * pow(e, (17.2694 * temp) / (temp + 237.3)));
-  VPD = SVP * (1 - (humid / 100));
-
-  Feather.add_data("VPD", "VPD", VPD);
-
-  // Log RSSI value from LoRa communication
-  float rssi = Feather.get<Loom::LoRa>()->get_signal_strength();
-  Feather.add_data("RSSI", "RSSI", rssi);
-
-  // Log whether system woke up from button or not
-  Feather.add_data("Button", "Pressed?", button);
-
-  prev = distance;
-  prevMicro = distanceMicro;
-
-  // --- Data Management End ---
-
-  Feather.display_data();
-
-  // Log SD in case it doesn't send
-  getSD(Feather).log();
-
-  loopCounter++;
-
-  // Send data to address 0 after set amount of packets
-  if (loopCounter == loraCount) {
-    getLoRa(Feather).send(0);
-    loopCounter = 0;
-  }
-
-  // Resetting interrupt
-  flag = false, button = false;
-
-  getInterruptManager(Feather).RTC_alarm_duration(TimeSpan(0,0,DELAY_IN_MINUTES,DELAY_IN_SECONDS));
-  getInterruptManager(Feather).reconnect_interrupt(RTC_INT_PIN);
-  getInterruptManager(Feather).reconnect_interrupt(INT_BUT);
-
-  Feather.power_down();
-
-  // Protocol to shut down AS5311
-  pinMode(CLK, INPUT);
-  pinMode(DO, INPUT);
-  pinMode(CS, INPUT);
-
-  // Protocol to shut off Neopixel
-  pinMode(LED, INPUT); 
-
-  // Protocol to turn off Hypnos
-  digitalWrite(13, LOW);
-  digitalWrite(HYPNOS3, HIGH);
-  //digitalWrite(HYPNOS5, LOW); 
-
-  // Protocol to shut down SD
-  pinMode(23, INPUT);
-  pinMode(24, INPUT);
-  pinMode(11, INPUT);
-  
-  getSleepManager(Feather).sleep();
-  while (!flag);
-}
-
-// --- AS5311 functions ---
-
-// Protocol to turn on AS5311
-void init_AS(){
-  pinMode(CS, OUTPUT);
-  pinMode(CLK, OUTPUT);
-  pinMode(DO, INPUT_PULLUP);
-  digitalWrite(CS, HIGH);
-  digitalWrite(CLK, LOW);
-  delay(2000);
-}
-
-// Takes 16 data measurements and averages them for normal reading
-int measure_average(){
-  int average = 0;
-  for (int j = 0; j < 16; j++)
-  {
-    average += getSerialPosition(CLK, CS, DO);
-  }
-  average /= 16;
-  return average;
-}
-
-// Takes 16 measurements and averages them for the starting serial value (0-4095 value)
-void serial_init_measure(){
-  for (int j = 0; j < 16; j++)
-  {
-    start += getSerialPosition(CLK, CS, DO);
-  }
-  start /= 16; 
-}
-
-// Lights up LED if interrupt button is pressed
-void verify_LED_button(){
-  if (button)
-  {
-    uint32_t ledCheck = getErrorBits(CLK, CS, DO);
-
-    if (ledCheck >= 16 && ledCheck <= 18)
-      getNeopixel(Feather).set_color(2, 0, 200, 0, 0);   // Green
-    else if (ledCheck == 19)
-      getNeopixel(Feather).set_color(2, 0, 200, 200, 0); // Yellow
-    else
-      getNeopixel(Feather).set_color(2, 0, 0, 200, 0);   // Red
-
-    delay(3000);
-    getNeopixel(Feather).set_color(2, 0, 0, 0, 0);       // LED Off
-  }
-}
-
-// Ensures that magnet starts in good position before continuing program
-void verify_position(){
-  uint32_t ledCheck = getErrorBits(CLK, CS, DO); // Tracking magnet position for indicator
-
-  while (ledCheck < 16 || ledCheck > 18)
-  {
-    if (ledCheck == 19)
-      getNeopixel(Feather).set_color(2, 0, 200, 200, 0); // Changes Neopixel to yellow
-    else
-      getNeopixel(Feather).set_color(2, 0, 0, 200, 0); // Changes Neopixel to red
-
-    delay(3000); // Gives user 3 seconds to adjust magnet before next reading
-    ledCheck = getErrorBits(CLK, CS, DO);
-  }
-}
-
-// Flashes green on Neopixel 3 times
-void green_flash(){
-  for (int i = 0; i < 3; i++)
-  {
-
-    getNeopixel(Feather).set_color(2, 0, 200, 0, 0); // Changes Neopixel to green
-    delay(500);
-
-    getNeopixel(Feather).set_color(2, 0, 0, 0, 0); // Turns off Neopixel
-    delay(500);
-  }
-}
-
-// --- Interrupt Functions ---
-
-// RTC interrupt
 void ISR_RTC()
 {
-  detachInterrupt(RTC_INT_PIN);
-  flag = true;
+    detachinterrupt(BUTTON_PIN);
+    detachinterrupt(RTC_INT_PIN);
+    hypnos.wakeup();
 }
 
-// Button interrupt
-void ISR_BUT()
+void ISR_BUTTON()
 {
-  detachInterrupt(INT_BUT);
-  flag = true;
-  button = true;
+    detachinterrupt(BUTTON_PIN);
+    detachinterrupt(RTC_INT_PIN);
+    hypnos.wakeup();
+    buttonPressed = true;
+}
+
+void takeMeasurements()
+{
+    static float previousDistance_mm = 0;
+    static float previousDistance_um = 0;
+
+    int average = getFilteredPosition();
+    magnetStatus status = magnetSensor.getMagnetRange();
+
+    // Also updates prevTwoSig to two most significant bits of first param, is being passed by ref
+    elapsed = computeElapsed(average, prevTwoSig, elapsed);
+
+    // Computes total distance in mm and um
+    float distance = (elapsed + ((2.0 * ((int)average - (int)start)) / 4095.0));
+    float distanceMicro = (elapsed * 1000) + ((2000 * ((int)average - (int)start)) / 4095.0);
+    float difference = 0;
+    float differenceMicro = 0;
+
+    // Reads the movement if any, else it sets the distance to 0
+    if (distance != prev)
+        difference = distance - prev;
+
+    if (distanceMicro != prevMicro)
+        differenceMicro = distanceMicro - prevMicro;
+
+    manager.measure();
+    manager.package();
+
+    manager.addData("AS5311", "Serial_Value", average);
+    manager.addData("Displacement_mm", "mm", distance_mm);
+    manager.addData("Displacement_um", "um", distanceMicro_um);
+    manager.addData("Difference_mm", "mm", difference_mm);
+    manager.addData("Difference_um", "um", difference_um);
+
+    
+    switch (status)
+    {
+    case error:
+        manager.addData("Status", "Color", "Error");
+        break;
+    case red:
+        manager.addData("Status", "Color", "Red");
+        break;
+    case yellow:
+        manager.addData("Status", "Color", "Yellow");
+        break;
+    case green:
+        manager.addData("Status", "Color", "Green");
+        break;
+    default: // do nothing
+    }
+
+    float SVP, VPD, temperature, humidity;
+    float e = 2.71828;
+
+    temperature = sht.getTemperature();
+    humidity = sht.getHumidity();
+
+    SVP = (0.61078 * pow(e, (17.2694 * temperature) / (temperature + 237.3)));
+    VPD = SVP * (1 - (humidity / 100));
+
+    manager.addData("VPD", "VPD", VPD);
+
+    // Log RSSI value from LoRa communication
+    float rssi = Feather.get<Loom::LoRa>()->get_signal_strength();
+    manager.addData("RSSI", "RSSI", rssi);
+
+    // Log whether system woke up from button or not
+    manager.addData("Button", "Pressed?", button);
+
+    previousDistance_mm = distance_mm;
+    previousDistance_um = distance_um;
+
+    manager.display_data();
+    hypnos.logToSD();
+}
+
+void alignMagnetSensor()
+{
+    magnetStatus status;
+
+checkLoop:
+    delay(100);
+    status = magnetSensor.getMagnetRange();
+
+    switch (status)
+    {
+    case error:
+    case red:
+        statusLight.set_color(2, 0, 0, 255, 0); // red
+        goto checkLoop;
+
+    case yellow:
+        statusLight.set_color(2, 0, 255, 255, 0); // yellow
+        goto checkLoop;
+
+    case green:
+        statusLight.set_color(2, 0, 255, 0, 0); // green
+
+        // Make sure calibration is stable before proceeding
+                for
+                    int(i = 0; i < 50; i++)
+                    {
+                        status = magnetSensor.getMagnetRange();
+                        if (status != magnetStatus.green)
+                            goto checkLoop;
+                        delay(100);
+                    }
+                break;
+    default: // do nothing
+    }
+
+    // Flashes Neopixel green
+    for (int i = 0; i < 6; i++)
+    {
+        statusLight.set_color(2, 0, 255, 0, 0); // green
+        delay(250);
+
+        statusLight.set_color(2, 0, 0, 0, 0); // off
+        delay(250);
+    }
+}
+
+void setup()
+{
+    pinMode(LED_BUILTIN, OUTPUT);
+    digitalWrite(LED_BUILTIN, HIGH);
+    // Enable pullup on button pin - this is necessary for interrupt
+    pinMode(BUTTON_PIN, INPUT_PULLUP);
+
+    manager.beginSerial();
+    hypnos.setLogName("Dendrometer");
+    hypnos.enable();
+    // Initialize the modules
+    manager.initialize();
+
+    alignMagnetSensor();
+    initialMeasurement = magnetSensor.getFilteredPosition();
+
+    // Register interrupts
+    hypnos.registerInterrupt(ISR_RTC);
+    hypnos.registerInterrupt(ISR_BUTTON, BUTTON_PIN);
+
+}
+
+void loop()
+{
+    if (buttonPressed)  // if interrupt button was pressed, display staus of magnet sensor
+    {
+        buttonPressed = false;
+
+        magnetStatus status = magnetSensor.getMagnetRange();
+
+        switch (status)
+        {
+        case error:
+        case red:
+            statusLight.set_color(2, 0, 0, 255, 0); // red
+            break;
+        case yellow:
+            statusLight.set_color(2, 0, 255, 255, 0); // yellow
+            break;
+        case green:
+            statusLight.set_color(2, 0, 255, 0, 0); // green
+            break;
+        default: // do nothing
+        }
+
+        delay(3000);
+        statusLight.set_color(2, 0, 0, 0, 0); // LED Off
+    }
+
+    takeMeasurements();
+
+    loopCounter++;
+
+    // Send data to address 0 after set amount of packets
+    if (loopCounter >= loraCount)
+    {
+        lora.send(0);
+        loopCounter = 0;
+    }
+
+    // deinitalize modules in order to enter sleep safely
+    manager.power_down();
+    digitalWrite(LED_BUILTIN, LOW);
+
+    hypnos.setInterruptDuration(TimeSpan(0, 0, MEASUREMENT_INTERVAL_MINUTES, MEASUREMENT_INTERVAL_SECONDS));
+    // Reattach to the interrupt after we have set the alarm so we can have repeat triggers
+    hypnos.reattachRTCInterrupt();
+    hypnos.reattachRTCInterrupt(BUTTON_PIN);
+
+    // Put the device into a deep sleep, operation HALTS here until the interrupt is triggered
+    hypnos.sleep();
+
+    // initialize modules before running next loop iteration
+    digitalWrite(LED_BUILTIN, HIGH);
+    manager.power_up();
 }
