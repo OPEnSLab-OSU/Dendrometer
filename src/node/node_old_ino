@@ -1,3 +1,5 @@
+#error this is the old version, dont compile it 
+
 #include <Loom.h>
 #include "AS5311.h"
 

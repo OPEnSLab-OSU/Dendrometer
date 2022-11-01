@@ -1,4 +1,6 @@
-/ Returns the serial output from AS533
+#error this is the old version, dont compile it 
+
+//Returns the serial output from AS533
 uint32_t bitbang(int CLK, int CS, int DO) {
   // write clock high to select the angular position data
   digitalWrite(CLK, HIGH);

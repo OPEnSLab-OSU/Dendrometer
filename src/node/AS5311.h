@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 
-enum magnetStatus
+enum class magnetStatus
 {
     red,
     green,
@@ -15,19 +15,22 @@ class AS5311
 {
 public:
     AS5311(uint8_t cs_pin, uint8_t clk_pin, uint8_t do_pin);
-    magnetStatus getMagnetRange();
+    magnetStatus getMagnetStatus();
     uint16_t getFilteredPosition();
-    
-    float computeElapsed(uint32_t curr, uint32_t &prevTwoSig, float elapsed);
 
 private:
     const uint8_t CS_PIN;
     const uint8_t CLK_PIN;
     const uint8_t DO_PIN;
 
-    uint32_t bitbang();
+    static const int DATA_TIMING_US;
+    static const int AVERAGE_MEASUREMENTS;
+
+    void initializePins();
+    void deinitializePins();
     uint16_t getPosition();
-}
+    uint32_t bitbang();
+};
 
 
 // bit definitions
