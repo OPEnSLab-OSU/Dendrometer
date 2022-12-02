@@ -1,6 +1,6 @@
 #include "AS5311.h"
 
-const int AS5311::DATA_TIMING_US = 1000;
+const int AS5311::DATA_TIMING_US = 12;
 // 1000us/bit is pretty slow,
 // maybe we can go faster?
 // according to the datasheet the chip's limit is 1MHz
@@ -24,7 +24,6 @@ void AS5311::initializePins()
 // deinitialize pins after serial read
 void AS5311::deinitializePins()
 {
-    // deinitalize pins
     pinMode(CS_PIN, INPUT);
     digitalWrite(CS_PIN, LOW);
     pinMode(CLK_PIN, INPUT);
@@ -73,6 +72,7 @@ uint32_t AS5311::bitbang()
     digitalWrite(CS_PIN, HIGH);
     digitalWrite(CLK_PIN, HIGH);
     delayMicroseconds(DATA_TIMING_US);
+    deinitializePins();
 
     return data;
 }
@@ -82,7 +82,7 @@ magnetStatus AS5311::getMagnetStatus()
     uint32_t data = bitbang();
 
     // invalid data
-    if (!(data & (1 << OCF)) || data & ((1 << COF) | (1 << LIN)))
+    if (!(data & (1 << OCF)) || data & (1 << COF))
         return magnetStatus::error;
 
     // magnetic field out of range

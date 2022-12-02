@@ -2,7 +2,6 @@
 
 #include <Arduino.h>
 
-
 enum class magnetStatus
 {
     red,
@@ -31,7 +30,6 @@ private:
     uint16_t getPosition();
     uint32_t bitbang();
 };
-
 
 // bit definitions
 #define PAR 0
