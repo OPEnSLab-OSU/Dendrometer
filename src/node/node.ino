@@ -10,15 +10,15 @@
 
 #include "AS5311.h"
 
-static const char *DEVICE_NAME = "DendrometerV4";
-static const uint8_t DENDROMETER_NODE_ID = 123;
+static const String DEVICE_NAME = "Dend4";
+static const uint8_t NODE_NUMBER = 123;
 // These two time values are added together to determine the interval time
-static const int8_t MEASUREMENT_INTERVAL_MINUTES = 15;
-static const int8_t MEASUREMENT_INTERVAL_SECONDS = 0;
+static const int8_t MEASUREMENT_INTERVAL_MINUTES = 0;
+static const int8_t MEASUREMENT_INTERVAL_SECONDS = 5;
 static const uint8_t TRANSMIT_INTERVAL = 16; // to save power, only transmit a packet every X measurements
 
 // Pins
-#define AS5311_CS A3
+#define AS5311_CS A3 //9 for LB version
 #define AS5311_CLK A5
 #define AS5311_DO A4
 #define LED_PIN A2
@@ -26,13 +26,13 @@ static const uint8_t TRANSMIT_INTERVAL = 16; // to save power, only transmit a p
 #define BUTTON_PIN A1
 #define RTC_INT_PIN 12
 
-Manager manager(DEVICE_NAME, DENDROMETER_NODE_ID);
+Manager manager(DEVICE_NAME, NODE_NUMBER);
 Loom_Hypnos hypnos(manager, HYPNOS_VERSION::V3_3, TIME_ZONE::PST);
 
 Loom_Analog analog(manager);
 Loom_SHT31 sht(manager);
 Loom_Neopixel statusLight(manager);
-Loom_LoRa lora(manager, DENDROMETER_NODE_ID); 
+Loom_LoRa lora(manager, NODE_NUMBER); 
 AS5311 magnetSensor(AS5311_CS, AS5311_CLK, AS5311_DO);
 
 // Global Variables
@@ -69,19 +69,17 @@ void ISR_BUTTON()
 
 void setup()
 {
-    pinMode(LED_BUILTIN, OUTPUT);
-    digitalWrite(LED_BUILTIN, HIGH);
     // Enable pullup on button pin - this is necessary for interrupt
     pinMode(BUTTON_PIN, INPUT_PULLUP);
 
     manager.beginSerial();
-    hypnos.setLogName("Dendrometer");
+    hypnos.setLogName(DEVICE_NAME + "--");
     hypnos.enable();
-    // Initialize the modules
     manager.initialize();
 
-    alignMagnetSensor();
-    initialMeasurement = magnetSensor.getFilteredPosition();
+     Serial.println("Skipping magnet alignment");
+    //alignMagnetSensor();
+    //initialMeasurement = magnetSensor.getFilteredPosition();
 
     // Register interrupts
     hypnos.registerInterrupt(ISR_RTC);
@@ -100,26 +98,23 @@ void loop()
         statusLight.set_color(2, 0, 0, 0, 0); // LED Off
     }
 
-    static uint8_t loopCounter = 14;
+    static uint8_t loopCounter = TRANSMIT_INTERVAL - 2;
 
     loopCounter++;
     // Send data to hub after set amount of packets
     // Note that this counter in incremented when the button is pressed
-    if (loopCounter >= TRANSMIT_INTERVAL)
+    if (true)//loopCounter >= TRANSMIT_INTERVAL)
     {
         lora.send(0);
         loopCounter = 0;
     }
 
-    sleepCycle();
+    delay(4000);//sleepCycle();
+    statusLight.set_color(2, 0, 0, 0, 255);delay(200);statusLight.set_color(2, 0, 0, 0, 0);
 }
 
 void sleepCycle()
 {
-    // deinitalize modules in order to enter sleep safely
-    manager.power_down();
-    digitalWrite(LED_BUILTIN, LOW);
-
     hypnos.setInterruptDuration(TimeSpan(0, 0, MEASUREMENT_INTERVAL_MINUTES, MEASUREMENT_INTERVAL_SECONDS));
     // Reattach to the interrupt after we have set the alarm so we can have repeat triggers
     hypnos.reattachRTCInterrupt();
@@ -127,10 +122,6 @@ void sleepCycle()
 
     // Put the device into a deep sleep, operation HALTS here until the interrupt is triggered
     hypnos.sleep();
-
-    // initialize modules before running next loop iteration
-    digitalWrite(LED_BUILTIN, HIGH);
-    manager.power_up();
 }
 
 void takeMeasurements()
@@ -138,8 +129,8 @@ void takeMeasurements()
     manager.measure();
     manager.package();
 
-    recordMagnetSensor();
     recordTempHumidSensor();
+    recordMagnetSensor();
 
     // Log whether system woke up from button or not
     manager.addData("Button", "Pressed?", buttonPressed);
@@ -166,19 +157,18 @@ void recordMagnetSensor()
     magnetStatus status = magnetSensor.getMagnetStatus();
     switch (status)
     {
-    case magnetStatus::error:
-        manager.addData("Magnet Alignment", "", "Error");
-        break;
     case magnetStatus::red:
-        manager.addData("Magnet Alignment", "", "Not aligned");
+        manager.addData("Magnet Alignment", "", "Red");
         break;
     case magnetStatus::yellow:
-        manager.addData("Magnet Alignment", "", "Poor");
+        manager.addData("Magnet Alignment", "", "Yellow");
         break;
     case magnetStatus::green:
-        manager.addData("Magnet Alignment", "", "OK");
+        manager.addData("Magnet Alignment", "", "Green");
         break;
+    case magnetStatus::error: //fall through
     default: // do nothing
+        manager.addData("Magnet Alignment", "", "Error");
         break;
     }
 }
@@ -191,6 +181,7 @@ void recordTempHumidSensor()
     temperature = sht.getTemperature();
     humidity = sht.getHumidity();
 
+    //Tetens equation
     SVP = (0.61078 * pow(e, (17.2694 * temperature) / (temperature + 237.3)));
     VPD = SVP * (1 - (humidity / 100));
 
@@ -206,7 +197,7 @@ void alignMagnetSensor()
         displayMagnetStatus(status);
         delay(100);
         if (status == magnetStatus::green && checkStableAlignment())
-            break;
+            flashGreen();
     }
     flashGreen();
 }
