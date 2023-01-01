@@ -41,7 +41,7 @@ uint16_t initialMeasurement = 0;
 
 void sleepCycle();
 void ISR_RTC();
-void ISR_BUT();
+void ISR_BUTTON();
 
 void takeMeasurements();
 void recordMagnetSensor();
@@ -54,17 +54,13 @@ void flashGreen();
 
 void ISR_RTC()
 {
-    detachInterrupt(BUTTON_PIN);
-    detachInterrupt(RTC_INT_PIN);
     hypnos.wakeup();
 }
 
 void ISR_BUTTON()
 {
-    detachInterrupt(BUTTON_PIN);
-    detachInterrupt(RTC_INT_PIN);
-    hypnos.wakeup();
     buttonPressed = true;
+    hypnos.wakeup();
 }
 
 void setup()
@@ -72,7 +68,10 @@ void setup()
     // Enable pullup on button pin - this is necessary for interrupt
     pinMode(BUTTON_PIN, INPUT_PULLUP);
 
-    manager.beginSerial();
+    delay(1000);
+    // wait for serial connection only if button is pressed (low)
+    manager.beginSerial(!digitalRead(BUTTON_PIN));
+
     hypnos.setLogName(DEVICE_NAME + "--");
     hypnos.enable();
     manager.initialize();
@@ -80,8 +79,6 @@ void setup()
     alignMagnetSensor();
     initialMeasurement = magnetSensor.getFilteredPosition();
 
-    // Register interrupts
-    hypnos.registerInterrupt(ISR_BUTTON, BUTTON_PIN);
     hypnos.registerInterrupt(ISR_RTC);
 }
 
@@ -116,11 +113,12 @@ void sleepCycle()
 {
     hypnos.setInterruptDuration(TimeSpan(0, 0, MEASUREMENT_INTERVAL_MINUTES, MEASUREMENT_INTERVAL_SECONDS));
     // Reattach to the interrupt after we have set the alarm so we can have repeat triggers
-    hypnos.reattachRTCInterrupt(BUTTON_PIN);
+    attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), ISR_BUTTON, FALLING);
     hypnos.reattachRTCInterrupt();
 
     // Put the device into a deep sleep, operation HALTS here until the interrupt is triggered
     hypnos.sleep();
+    detachInterrupt(digitalPinToInterrupt(BUTTON_PIN));
 }
 
 void takeMeasurements()
@@ -209,12 +207,12 @@ void displayMagnetStatus(magnetStatus status)
         statusLight.set_color(2, 0, 255, 255, 0); // yellow
         break;
     case magnetStatus::green:
-        statusLight.set_color(2, 0, 255, 0, 0); // green
+        statusLight.set_color(2, 0, 0, 255, 0); // green
         break;
     case magnetStatus::error: // Fall through
     case magnetStatus::red:   // Fall through
     default:
-        statusLight.set_color(2, 0, 0, 255, 0); // red
+        statusLight.set_color(2, 0, 255, 0, 0); // red
         break;                                  // do nothing
     }
 }
@@ -224,7 +222,7 @@ void flashGreen()
 {
     for (int i = 0; i < 6; i++)
     {
-        statusLight.set_color(2, 0, 255, 0, 0); // green
+        statusLight.set_color(2, 0, 0, 255, 0); // green
         delay(250);
         statusLight.set_color(2, 0, 0, 0, 0); // off
         delay(250);
