@@ -32,7 +32,7 @@ private:
     uint32_t bitbang();
 };
 
-// bit definitions
+// bit definitions - See pages 12 and 13 of the AS5311 datasheet for more information
 #define PAR 0
 #define MAGDEC 1
 #define MAGINC 2

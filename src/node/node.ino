@@ -98,10 +98,10 @@ void setup()
  */
 void loop()
 {
-    // if (magnetSensor.getMagnetStatus() == magnetStatus::green)
-    //     Serial.println(magnetSensor.getFilteredPosition());
-    // delay(100);
-    // return;
+    if (magnetSensor.getMagnetStatus() == magnetStatus::green)
+        Serial.println(magnetSensor.getFilteredPosition());
+    delay(50);
+    return;
 
     takeMeasurements();
 
@@ -324,9 +324,11 @@ bool checkStableAlignment()
 void checkMagnetSensor()
 {
     uint32_t data = magnetSensor.getMagnetRaw();
-    Serial.println("Checking magnet sensor... serial data is:");
-    Serial.println(data, BIN);
-    if (data != 0x3FFFF)
+    // Serial.print("Checking magnet sensor... serial data is: ");
+    // Serial.println(data, BIN);
+    // Serial.print("Even parity? ");
+    // Serial.println(__builtin_parity(data) == 0);
+    if(__builtin_parity(data) == 0 && data != 0) //__builtin_parity() returns 0 if value has even parity
         return;
     while (1)
     {

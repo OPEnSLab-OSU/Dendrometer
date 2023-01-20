@@ -20,9 +20,7 @@ void AS5311::initializePins()
     pinMode(CS_PIN, OUTPUT);
     digitalWrite(CLK_PIN, HIGH);
     pinMode(CLK_PIN, OUTPUT);
-
-    // changed from INPUT. doesn't seem to cause issues with communication
-    pinMode(DO_PIN, INPUT_PULLUP);
+    pinMode(DO_PIN, INPUT);
 }
 
 /**
@@ -88,6 +86,7 @@ uint32_t AS5311::bitbang()
 
 /**
  * Determine the magnet alignment status
+ * See pages 12 to 15 of the AS5311 datasheet for more information
  * @return magnetStatus enum
  */
 magnetStatus AS5311::getMagnetStatus()
@@ -95,7 +94,7 @@ magnetStatus AS5311::getMagnetStatus()
     uint32_t data = bitbang();
 
     // invalid data
-    if (!(data & (1 << OCF)) || data & (1 << COF))
+    if (!(data & (1 << OCF)) || data & (1 << COF) || __builtin_parity(data)) //__builtin_parity returns 1 if odd parity
         return magnetStatus::error;
 
     // magnetic field out of range
