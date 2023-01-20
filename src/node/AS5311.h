@@ -16,6 +16,7 @@ public:
     AS5311(uint8_t cs_pin, uint8_t clk_pin, uint8_t do_pin);
     magnetStatus getMagnetStatus();
     uint16_t getFilteredPosition();
+    uint32_t getMagnetRaw();
 
 private:
     const uint8_t CS_PIN;
@@ -35,7 +36,7 @@ private:
 #define PAR 0
 #define MAGDEC 1
 #define MAGINC 2
-#define LIN 3 
+#define LIN 3
 #define COF 4
 #define OCF 5
 

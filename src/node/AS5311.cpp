@@ -1,8 +1,8 @@
+#include "wiring_constants.h"
 #include "AS5311.h"
 
 const int AS5311::DATA_TIMING_US = 12;
-// 1000us/bit is pretty slow,
-// maybe we can go faster?
+// 1000us/bit was the value in the V3 code
 // according to the datasheet the chip's limit is 1MHz
 
 const int AS5311::AVERAGE_MEASUREMENTS = 16;
@@ -10,7 +10,9 @@ const int AS5311::AVERAGE_MEASUREMENTS = 16;
 AS5311::AS5311(uint8_t cs_pin, uint8_t clk_pin, uint8_t do_pin)
     : CS_PIN(cs_pin), CLK_PIN(clk_pin), DO_PIN(do_pin) {}
 
-// initialize pins for serial read
+/**
+ *  Initialize pins for serial read procedure
+ */
 void AS5311::initializePins()
 {
     // initalize pins
@@ -18,10 +20,14 @@ void AS5311::initializePins()
     pinMode(CS_PIN, OUTPUT);
     digitalWrite(CLK_PIN, HIGH);
     pinMode(CLK_PIN, OUTPUT);
-    pinMode(DO_PIN, INPUT);
+
+    // changed from INPUT. doesn't seem to cause issues with communication
+    pinMode(DO_PIN, INPUT_PULLUP);
 }
 
-// deinitialize pins after serial read
+/**
+ * deinitialize pins after serial read
+ */
 void AS5311::deinitializePins()
 {
     pinMode(CS_PIN, INPUT);
@@ -31,7 +37,10 @@ void AS5311::deinitializePins()
     pinMode(DO_PIN, INPUT);
 }
 
-// Returns the serial output from AS533
+/**
+ *  Returns the serial output from AS533
+ * @return 32 bit value, of which the 18 least signifcant bits contain the sensor data
+ */
 uint32_t AS5311::bitbang()
 {
     initializePins();
@@ -77,6 +86,10 @@ uint32_t AS5311::bitbang()
     return data;
 }
 
+/**
+ * Determine the magnet alignment status
+ * @return magnetStatus enum
+ */
 magnetStatus AS5311::getMagnetStatus()
 {
     uint32_t data = bitbang();
@@ -96,12 +109,28 @@ magnetStatus AS5311::getMagnetStatus()
     return magnetStatus::green;
 }
 
+/**
+ * Return the raw sensor binary data
+ * @return raw sensor data
+ */
+uint32_t AS5311::getMagnetRaw()
+{
+    return bitbang();
+}
+
+/**
+ * Right shift the raw sensor data to isolate the absolute position component
+ * @return 12-bit absolute postion value
+ */
 uint16_t AS5311::getPosition()
 {
     return bitbang() >> ANGLEDATAOFFSET;
 }
 
-// Takes multiple data measurements and average them
+/**
+ * Takes multiple position measurements and average them
+ * @return averaged 12-bit absolute position value
+ */
 uint16_t AS5311::getFilteredPosition()
 {
     uint16_t average = 0;
