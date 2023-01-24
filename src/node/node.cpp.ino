@@ -98,10 +98,11 @@ void setup()
  */
 void loop()
 {
+/*
     if (magnetSensor.getMagnetStatus() == magnetStatus::green)
         Serial.println(magnetSensor.getFilteredPosition());
     delay(50);
-    return;
+    return; */
 
     takeMeasurements();
 
@@ -113,10 +114,9 @@ void loop()
         statusLight.set_color(2, 0, 0, 0, 0); // LED Off
     }
 
-    static uint8_t loopCounter = TRANSMIT_INTERVAL - 2;
+    //loop counter starts high so an initial transmission can be triggered by pressing the button
+    static uint8_t loopCounter = TRANSMIT_INTERVAL - 2; 
     loopCounter++;
-    // Send data to hub after set amount of packets
-    // Note that this counter in incremented when the button is pressed
     if (loopCounter >= TRANSMIT_INTERVAL)
     {
 #ifndef DISABLE_LORA_TX
@@ -169,34 +169,33 @@ void takeMeasurements()
  */
 void recordMagnetSensor()
 {
-/*
-    static const int wrap_threshold = 2048;
+    static const int WRAP_THRESHOLD = 2048;
+    static const int TICKS = 4095; //2^12 -1 == 4096 - 1
+    static const float POLE_PAIR_LENGTH_UM = 2000.0; // 2mm == 2000um
+    static const float UM_PER_TICK = POLE_PAIR_LENGTH_UM / TICKS;
 
-    int reading = (int)magnetSensor.getFilteredPosition();
+    static int lastPosition = 0;
+    static int overflows = 0;
 
-    static int lastReading = 0;
+    int magnetPosition = (int)magnetSensor.getFilteredPosition();
 
-    static float displacement_um = 0;
-
-    // STATIC POSITION??? add reading each time?? add difference?
-
-    int difference = reading - lastPosition;
-    if (abs(difference) > wrap_threshold)
+    int difference = magnetPosition - lastPosition;
+    if (abs(difference) > WRAP_THRESHOLD)
     {
-        if (difference < 0)
-        { // high to low overflow
-        }
-        else
-        { // low to high overflow
-        }
+        if (difference < 0) // high to low overflow
+            overflows +=1;
+        else // low to high overflow
+            overflows -= 1;
     }
-    else
+    lastPosition = magnetPosition;
 
-        manager.addData("AS5311", "Serial_Value", reading);
-    static const float um_per_tick = (2000.0 / 4095.0);
-    manager.addData("Displacement_um", "um", position * um_per_tick);
-    lastPosition = reading;
-*/
+    
+    float displacement_um = ((magnetPosition - initialMagnetPosition) * UM_PER_TICK) 
+        + overflows * POLE_PAIR_LENGTH_UM;
+    manager.addData("AS5311", "Serial_Value", magnetPosition);
+    manager.addData("Displacement_um", "um", displacement_um);
+
+
 
     magnetStatus status = magnetSensor.getMagnetStatus();
     switch (status)
@@ -318,7 +317,6 @@ bool checkStableAlignment()
 }
 
 /**
- * NOT COMPLETELY TESTED.
  * Checks to see if a magnet sensor is connected and functioning.
  */
 void checkMagnetSensor()
@@ -330,7 +328,7 @@ void checkMagnetSensor()
     // Serial.println(__builtin_parity(data) == 0);
     if(__builtin_parity(data) == 0 && data != 0) //__builtin_parity() returns 0 if value has even parity
         return;
-    while (1)
+    for(auto _ = 6; _--;)
     {
         flashColor(255, 100, 0);
     }
