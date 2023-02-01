@@ -39,12 +39,19 @@ void AS5311::deinitializePins()
  *  Returns the serial output from AS533
  * @return 32 bit value, of which the 18 least signifcant bits contain the sensor data
  */
-uint32_t AS5311::bitbang()
+uint32_t AS5311::bitbang(bool angleData = true)
 {
     initializePins();
 
-    // write clock high to select the angular position data
-    digitalWrite(CLK_PIN, HIGH);
+    if (angleData)
+    {
+        digitalWrite(CLK_PIN, HIGH); // write clock high to select the angular position data
+    }
+    else
+    {
+        digitalWrite(CLK_PIN, LOW); // write clock high to select the magnetic field strength data
+    }
+
     delayMicroseconds(DATA_TIMING_US);
     // select the chip
     digitalWrite(CS_PIN, LOW);
@@ -112,9 +119,9 @@ magnetStatus AS5311::getMagnetStatus()
  * Return the raw sensor binary data
  * @return raw sensor data
  */
-uint32_t AS5311::getMagnetRaw()
+uint32_t AS5311::getRawData()
 {
-    return bitbang();
+    return bitbang(true);
 }
 
 /**
@@ -123,7 +130,16 @@ uint32_t AS5311::getMagnetRaw()
  */
 uint16_t AS5311::getPosition()
 {
-    return bitbang() >> ANGLEDATAOFFSET;
+    return bitbang(true) >> DATAOFFSET;
+}
+
+/**
+ * Right shift the raw sensor data to isolate the field strength component
+ * @return 12-bit magnetic field strength value
+ */
+uint16_t AS5311::getFieldStrength()
+{
+    return bitbang(false) >> DATAOFFSET;
 }
 
 /**

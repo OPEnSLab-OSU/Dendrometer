@@ -3,8 +3,8 @@
 //////////////////////////
 /* DEVICE CONFIGURATION */
 //////////////////////////
-static const String DEVICE_NAME = "Dend4";
 static const uint8_t NODE_NUMBER = 123;
+static const String DEVICE_NAME = "Dend4";
 // These two time values are added together to determine the interval time
 static const int8_t MEASUREMENT_INTERVAL_MINUTES = 15;
 static const int8_t MEASUREMENT_INTERVAL_SECONDS = 0;
@@ -51,6 +51,7 @@ void ISR_BUTTON();
 
 void takeMeasurements();
 void recordMagnetSensor();
+void recordMagnetStatus();
 void recordTempHumidSensor();
 
 void checkMagnetSensor();
@@ -98,7 +99,7 @@ void setup()
  */
 void loop()
 {
-/*
+    /*
     if (magnetSensor.getMagnetStatus() == magnetStatus::green)
         Serial.println(magnetSensor.getFilteredPosition());
     delay(50);
@@ -114,8 +115,8 @@ void loop()
         statusLight.set_color(2, 0, 0, 0, 0); // LED Off
     }
 
-    //loop counter starts high so an initial transmission can be triggered by pressing the button
-    static uint8_t loopCounter = TRANSMIT_INTERVAL - 2; 
+    // loop counter starts high so an initial transmission can be triggered by pressing the button
+    static uint8_t loopCounter = TRANSMIT_INTERVAL - 2;
     loopCounter++;
     if (loopCounter >= TRANSMIT_INTERVAL)
     {
@@ -170,7 +171,7 @@ void takeMeasurements()
 void recordMagnetSensor()
 {
     static const int WRAP_THRESHOLD = 2048;
-    static const int TICKS = 4095; //2^12 -1 == 4096 - 1
+    static const int TICKS = 4096;                   // 2^12 == 4096   see datasheet page 10
     static const float POLE_PAIR_LENGTH_UM = 2000.0; // 2mm == 2000um
     static const float UM_PER_TICK = POLE_PAIR_LENGTH_UM / TICKS;
 
@@ -183,35 +184,40 @@ void recordMagnetSensor()
     if (abs(difference) > WRAP_THRESHOLD)
     {
         if (difference < 0) // high to low overflow
-            overflows +=1;
+            overflows += 1;
         else // low to high overflow
             overflows -= 1;
     }
     lastPosition = magnetPosition;
 
-    
-    float displacement_um = ((magnetPosition - initialMagnetPosition) * UM_PER_TICK) 
-        + overflows * POLE_PAIR_LENGTH_UM;
-    manager.addData("AS5311", "Serial_Value", magnetPosition);
-    manager.addData("Displacement_um", "um", displacement_um);
+    float displacement_um = ((magnetPosition - initialMagnetPosition) * UM_PER_TICK) + overflows * POLE_PAIR_LENGTH_UM;
 
+    recordMagnetStatus();
+    manager.addData("AS5311", "mag", magnetSensor.getFieldStrength());
+    manager.addData("AS5311", "pos", magnetPosition);
+    manager.addData("displacement", "um", displacement_um);
+}
 
-
+/**
+ * Record the alignment status of the magnet sensor
+ */
+void recordMagnetStatus()
+{
     magnetStatus status = magnetSensor.getMagnetStatus();
     switch (status)
     {
     case magnetStatus::red:
-        manager.addData("Magnet Alignment", "", "Red");
+        manager.addData("AS5311", "Alignment", "Red");
         break;
     case magnetStatus::yellow:
-        manager.addData("Magnet Alignment", "", "Yellow");
+        manager.addData("AS5311", "Alignment", "Yellow");
         break;
     case magnetStatus::green:
-        manager.addData("Magnet Alignment", "", "Green");
+        manager.addData("AS5311", "Alignment", "Green");
         break;
     case magnetStatus::error: // fall through
     default:
-        manager.addData("Magnet Alignment", "", "Error");
+        manager.addData("AS5311", "Alignment", "Error");
         break;
     }
 }
@@ -231,7 +237,7 @@ void recordTempHumidSensor()
     SVP = (0.61078 * pow(e, (17.2694 * temperature) / (temperature + 237.3)));
     VPD = SVP * (1 - (humidity / 100));
 
-    manager.addData("VPD", "VPD", VPD);
+    manager.addData("SHT31", "VPD", VPD);
 }
 
 /**
@@ -298,7 +304,7 @@ void flashColor(uint8_t r, uint8_t g, uint8_t b)
  */
 bool checkStableAlignment()
 {
-    const unsigned int CHECK_TIME = 5000;
+    const unsigned int CHECK_TIME = 4000;
     magnetStatus status;
     bool aligned = true;
 
@@ -321,15 +327,13 @@ bool checkStableAlignment()
  */
 void checkMagnetSensor()
 {
-    uint32_t data = magnetSensor.getMagnetRaw();
+    uint32_t data = magnetSensor.getRawData();
     // Serial.print("Checking magnet sensor... serial data is: ");
     // Serial.println(data, BIN);
     // Serial.print("Even parity? ");
     // Serial.println(__builtin_parity(data) == 0);
-    if(__builtin_parity(data) == 0 && data != 0) //__builtin_parity() returns 0 if value has even parity
+    if (__builtin_parity(data) == 0 && data != 0) //__builtin_parity() returns 0 if value has even parity
         return;
-    for(auto _ = 6; _--;)
-    {
+    for (auto _ = 6; _--;)
         flashColor(255, 100, 0);
-    }
 }

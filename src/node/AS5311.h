@@ -16,7 +16,8 @@ public:
     AS5311(uint8_t cs_pin, uint8_t clk_pin, uint8_t do_pin);
     magnetStatus getMagnetStatus();
     uint16_t getFilteredPosition();
-    uint32_t getMagnetRaw();
+    uint16_t getFieldStrength();
+    uint32_t getRawData();
 
 private:
     const uint8_t CS_PIN;
@@ -29,7 +30,7 @@ private:
     void initializePins();
     void deinitializePins();
     uint16_t getPosition();
-    uint32_t bitbang();
+    uint32_t bitbang(bool);
 };
 
 // bit definitions - See pages 12 and 13 of the AS5311 datasheet for more information
@@ -40,4 +41,4 @@ private:
 #define COF 4
 #define OCF 5
 
-#define ANGLEDATAOFFSET 6
+#define DATAOFFSET 6
