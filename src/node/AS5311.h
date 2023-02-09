@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <Loom_Manager.h>
 
 enum class magnetStatus
 {
@@ -18,6 +19,9 @@ public:
     uint16_t getFilteredPosition();
     uint16_t getFieldStrength();
     uint32_t getRawData();
+    
+    void measure(Manager &);
+    float measureDisplacement(int);
 
 private:
     const uint8_t CS_PIN;
@@ -26,6 +30,12 @@ private:
 
     static const int DATA_TIMING_US;
     static const int AVERAGE_MEASUREMENTS;
+
+    int initialPosition = -1; //negative number indicates that initial position has not been measured
+    int lastPosition = 0;
+    int overflows = 0;
+
+    void recordMagnetStatus(Manager &);
 
     void initializePins();
     void deinitializePins();

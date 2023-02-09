@@ -5,7 +5,7 @@
 //////////////////////////
 static const uint8_t NODE_NUMBER = 123;
 static const String DEVICE_NAME = "Dend4";
-// These two time values are added together to determine the interval time
+// These two time values are added together to determine the measurement interval
 static const int8_t MEASUREMENT_INTERVAL_MINUTES = 15;
 static const int8_t MEASUREMENT_INTERVAL_SECONDS = 0;
 static const uint8_t TRANSMIT_INTERVAL = 16; // to save power, only transmit a packet every X measurements
@@ -28,7 +28,6 @@ static const uint8_t TRANSMIT_INTERVAL = 16; // to save power, only transmit a p
 #define AS5311_CLK A5
 #define AS5311_DO A4
 #define LED_PIN A2
-
 #define BUTTON_PIN A1
 #define RTC_INT_PIN 12
 
@@ -42,17 +41,15 @@ Loom_LoRa lora(manager, NODE_NUMBER);
 AS5311 magnetSensor(AS5311_CS, AS5311_CLK, AS5311_DO);
 
 // Global Variables
-int initialMagnetPosition = 0;
 volatile bool buttonPressed = false; // Check to see if button was pressed
 
 void sleepCycle();
 void ISR_RTC();
 void ISR_BUTTON();
 
-void takeMeasurements();
-void recordMagnetSensor();
-void recordMagnetStatus();
-void recordTempHumidSensor();
+void measure();
+void measureVPD();
+void transmitLora();
 
 void checkMagnetSensor();
 void alignMagnetSensor();
@@ -89,7 +86,6 @@ void setup()
 
     checkMagnetSensor();
     alignMagnetSensor();
-    initialMagnetPosition = (int)magnetSensor.getFilteredPosition();
 
     hypnos.registerInterrupt(ISR_RTC);
 }
@@ -99,22 +95,69 @@ void setup()
  */
 void loop()
 {
-    /*
-    if (magnetSensor.getMagnetStatus() == magnetStatus::green)
-        Serial.println(magnetSensor.getFilteredPosition());
+    /*if(magnetSensor.getMagnetStatus() == magnetStatus::green) {
+        Serial.print(magnetSensor.getFilteredPosition()); Serial.print(" "); 
+        Serial.println(magnetSensor.measureDisplacement(magnetSensor.getFilteredPosition()));
+    }
     delay(50);
     return; */
 
-    takeMeasurements();
+    measure();
+    transmitLora();
+
+    buttonPressed = false;
+
+    sleepCycle(); // bug: device will display status for two sleep cycles instead of one when the button is pressed
 
     if (buttonPressed) // if interrupt button was pressed, display staus of magnet sensor
     {
-        buttonPressed = false;
         displayMagnetStatus(magnetSensor.getMagnetStatus());
         delay(3000);
         statusLight.set_color(2, 0, 0, 0, 0); // LED Off
     }
+}
 
+/**
+ * Perform all measurements for the dendrometer and put them into a packet.
+ * Log to SD card.
+ */
+void measure()
+{
+    manager.measure();
+    manager.package();
+
+    measureVPD();
+    magnetSensor.measure(manager);
+
+    // Log whether system woke up from button or not
+    manager.addData("Button", "Pressed?", buttonPressed);
+
+    if (Serial)
+        manager.display_data();
+
+    hypnos.logToSD();
+}
+
+/**
+ * Log readings from the SHT31 sensor. Also calculate and log VPD.
+ */
+void measureVPD()
+{
+    float SVP, VPD, temperature, humidity;
+    float e = 2.71828;
+
+    temperature = sht.getTemperature();
+    humidity = sht.getHumidity();
+
+    // Tetens equation
+    SVP = (0.61078 * pow(e, (17.2694 * temperature) / (temperature + 237.3)));
+    VPD = SVP * (1 - (humidity / 100));
+
+    manager.addData("SHT31", "VPD", VPD);
+}
+
+void transmitLora()
+{
     // loop counter starts high so an initial transmission can be triggered by pressing the button
     static uint8_t loopCounter = TRANSMIT_INTERVAL - 2;
     loopCounter++;
@@ -125,8 +168,6 @@ void loop()
 #endif
         loopCounter = 0;
     }
-
-    sleepCycle();
 }
 
 /**
@@ -145,104 +186,8 @@ void sleepCycle()
 }
 
 /**
- * Perform all measurements for the dendrometer and put them into a packet.
- * Log to SD card.
- */
-void takeMeasurements()
-{
-    manager.measure();
-    manager.package();
-
-    recordTempHumidSensor();
-    recordMagnetSensor();
-
-    // Log whether system woke up from button or not
-    manager.addData("Button", "Pressed?", buttonPressed);
-
-    if (Serial)
-        manager.display_data();
-
-    hypnos.logToSD();
-}
-
-/**
- * Record the data from the magnet sensor, process it, and add it to the packet.
- */
-void recordMagnetSensor()
-{
-    static const int WRAP_THRESHOLD = 2048;
-    static const int TICKS = 4096;                   // 2^12 == 4096   see datasheet page 10
-    static const float POLE_PAIR_LENGTH_UM = 2000.0; // 2mm == 2000um
-    static const float UM_PER_TICK = POLE_PAIR_LENGTH_UM / TICKS;
-
-    static int lastPosition = 0;
-    static int overflows = 0;
-
-    int magnetPosition = (int)magnetSensor.getFilteredPosition();
-
-    int difference = magnetPosition - lastPosition;
-    if (abs(difference) > WRAP_THRESHOLD)
-    {
-        if (difference < 0) // high to low overflow
-            overflows += 1;
-        else // low to high overflow
-            overflows -= 1;
-    }
-    lastPosition = magnetPosition;
-
-    float displacement_um = ((magnetPosition - initialMagnetPosition) * UM_PER_TICK) + overflows * POLE_PAIR_LENGTH_UM;
-
-    recordMagnetStatus();
-    manager.addData("AS5311", "mag", magnetSensor.getFieldStrength());
-    manager.addData("AS5311", "pos", magnetPosition);
-    manager.addData("displacement", "um", displacement_um);
-}
-
-/**
- * Record the alignment status of the magnet sensor
- */
-void recordMagnetStatus()
-{
-    magnetStatus status = magnetSensor.getMagnetStatus();
-    switch (status)
-    {
-    case magnetStatus::red:
-        manager.addData("AS5311", "Alignment", "Red");
-        break;
-    case magnetStatus::yellow:
-        manager.addData("AS5311", "Alignment", "Yellow");
-        break;
-    case magnetStatus::green:
-        manager.addData("AS5311", "Alignment", "Green");
-        break;
-    case magnetStatus::error: // fall through
-    default:
-        manager.addData("AS5311", "Alignment", "Error");
-        break;
-    }
-}
-
-/**
- * Log readings from the SHT30 sensor. Also calculate and log VPD
- */
-void recordTempHumidSensor()
-{
-    float SVP, VPD, temperature, humidity;
-    float e = 2.71828;
-
-    temperature = sht.getTemperature();
-    humidity = sht.getHumidity();
-
-    // Tetens equation
-    SVP = (0.61078 * pow(e, (17.2694 * temperature) / (temperature + 237.3)));
-    VPD = SVP * (1 - (humidity / 100));
-
-    manager.addData("SHT31", "VPD", VPD);
-}
-
-/**
  * Magnet alignment procedure. Displays magnet sensor to user until
- * The magnet is determined to be properly aligned and maintains that alignment
+ * the magnet is determined to be properly aligned and maintains that alignment
  * for a certain amount of time
  */
 void alignMagnetSensor()

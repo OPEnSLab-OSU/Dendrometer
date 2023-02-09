@@ -156,3 +156,69 @@ uint16_t AS5311::getFilteredPosition()
     average /= AVERAGE_MEASUREMENTS;
     return average;
 }
+
+/**
+ * Record the data from the magnet sensor, process it, and add it to the manager's packet.
+ */
+void AS5311::measure(Manager &manager)
+{
+    int pos = (int)getFilteredPosition();
+
+    recordMagnetStatus(manager);
+    manager.addData("AS5311", "mag", getFieldStrength());
+    manager.addData("AS5311", "pos", pos);
+    manager.addData("displacement", "um", measureDisplacement(pos));
+}
+
+/**
+ * Calculate the displacement of the magnet given a position.
+ * Keeps a persistant count of sensor range overflows
+ * Moving the sensor too much (about 1mm) in between calls to this function will result in invalid data.
+ */
+float AS5311::measureDisplacement(int pos)
+{
+    static const int WRAP_THRESHOLD = 2048;
+    static const int TICKS = 4096;                   // 2^12 == 4096   see datasheet page 10
+    static const float POLE_PAIR_LENGTH_UM = 2000.0; // 2mm == 2000um
+    static const float UM_PER_TICK = POLE_PAIR_LENGTH_UM / TICKS;
+
+    if (initialPosition == -1) // initial position has not been measured
+        initialPosition = pos;
+    int magnetPosition = pos;
+
+    int difference = magnetPosition - lastPosition;
+    if (abs(difference) > WRAP_THRESHOLD)
+    {
+        if (difference < 0) // high to low overflow
+            overflows += 1;
+        else // low to high overflow
+            overflows -= 1;
+    }
+    lastPosition = magnetPosition;
+
+    return ((magnetPosition - initialPosition) * UM_PER_TICK) + overflows * POLE_PAIR_LENGTH_UM;
+}
+
+/**
+ * Record the alignment status of the magnet sensor
+ */
+void AS5311::recordMagnetStatus(Manager &manager)
+{
+    magnetStatus status = getMagnetStatus();
+    switch (status)
+    {
+    case magnetStatus::red:
+        manager.addData("AS5311", "Alignment", "Red");
+        break;
+    case magnetStatus::yellow:
+        manager.addData("AS5311", "Alignment", "Yellow");
+        break;
+    case magnetStatus::green:
+        manager.addData("AS5311", "Alignment", "Green");
+        break;
+    case magnetStatus::error: // fall through
+    default:
+        manager.addData("AS5311", "Alignment", "Error");
+        break;
+    }
+}
