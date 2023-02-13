@@ -1,4 +1,3 @@
-#include "wiring_constants.h"
 #include "AS5311.h"
 
 const int AS5311::DATA_TIMING_US = 12;
