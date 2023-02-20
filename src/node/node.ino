@@ -1,4 +1,11 @@
-#include <Arduino.h>
+#include <Loom_Manager.h>
+#include <Hardware/Loom_Hypnos/Loom_Hypnos.h>
+#include <Hardware/Actuators/Loom_Neopixel/Loom_Neopixel.h>
+#include <Sensors/Loom_Analog/Loom_Analog.h>
+#include <Sensors/I2C/Loom_SHT31/Loom_SHT31.h>
+#include <Radio/Loom_LoRa/Loom_LoRa.h>
+
+#include "AS5311.h"
 
 //////////////////////////
 /* DEVICE CONFIGURATION */
@@ -12,16 +19,7 @@ static const uint8_t TRANSMIT_INTERVAL = 16; // to save power, only transmit a p
 //////////////////////////
 //////////////////////////
 //////////////////////////
-#define DISABLE_LORA_TX // DEBUG ONLY. REMOVE WHEN NOT TESTING
-
-#include <Loom_Manager.h>
-#include <Hardware/Loom_Hypnos/Loom_Hypnos.h>
-#include <Hardware/Actuators/Loom_Neopixel/Loom_Neopixel.h>
-#include <Sensors/Loom_Analog/Loom_Analog.h>
-#include <Sensors/I2C/Loom_SHT31/Loom_SHT31.h>
-#include <Radio/Loom_LoRa/Loom_LoRa.h>
-
-#include "AS5311.h"
+//#define DISABLE_LORA_TX // DEBUG ONLY. REMOVE WHEN NOT TESTING
 
 // Pins
 #define AS5311_CS A3 // 9 for LB version
@@ -95,26 +93,16 @@ void setup()
  */
 void loop()
 {
-    /*if(magnetSensor.getMagnetStatus() == magnetStatus::green) {
-        Serial.print(magnetSensor.getFilteredPosition()); Serial.print(" "); 
-        Serial.println(magnetSensor.measureDisplacement(magnetSensor.getFilteredPosition()));
-    }
-    delay(50);
-    return; */
-
     measure();
-    transmitLora();
-
-    buttonPressed = false;
-
-    sleepCycle(); // bug: device will display status for two sleep cycles instead of one when the button is pressed
-
     if (buttonPressed) // if interrupt button was pressed, display staus of magnet sensor
     {
         displayMagnetStatus(magnetSensor.getMagnetStatus());
         delay(3000);
         statusLight.set_color(2, 0, 0, 0, 0); // LED Off
+        buttonPressed = false;
     }
+    transmitLora();
+    sleepCycle(); // bug: device will display status for two sleep cycles instead of one when the button is pressed
 }
 
 /**
@@ -125,15 +113,13 @@ void measure()
 {
     manager.measure();
     manager.package();
-
     measureVPD();
     magnetSensor.measure(manager);
 
     // Log whether system woke up from button or not
     manager.addData("Button", "Pressed?", buttonPressed);
 
-    if (Serial)
-        manager.display_data();
+    manager.display_data();
 
     hypnos.logToSD();
 }
@@ -195,6 +181,7 @@ void alignMagnetSensor()
     magnetStatus status;
     while (1)
     {
+        //Watchdog.reset();
         status = magnetSensor.getMagnetStatus();
         displayMagnetStatus(status);
         delay(100);
@@ -236,6 +223,7 @@ void flashColor(uint8_t r, uint8_t g, uint8_t b)
 {
     for (int i = 0; i < 6; i++)
     {
+        //Watchdog.reset();
         statusLight.set_color(2, 0, r, g, b);
         delay(250);
         statusLight.set_color(2, 0, 0, 0, 0); // off
@@ -255,6 +243,7 @@ bool checkStableAlignment()
 
     for (int i = 0; i < (CHECK_TIME / 100); i++)
     {
+        //Watchdog.reset();
         status = magnetSensor.getMagnetStatus();
         if (status != magnetStatus::green)
         {
