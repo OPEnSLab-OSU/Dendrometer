@@ -18,24 +18,22 @@ static const int8_t MEASUREMENT_INTERVAL_SECONDS = 0;
 static const uint8_t TRANSMIT_INTERVAL = 16; // to save power, only transmit a packet every X measurements
 //////////////////////////
 //////////////////////////
-//////////////////////////
-//#define DISABLE_LORA_TX // DEBUG ONLY. REMOVE WHEN NOT TESTING
 
 // Pins
 #define AS5311_CS A3 // 9 for LB version
 #define AS5311_CLK A5
 #define AS5311_DO A4
-#define LED_PIN A2
 #define BUTTON_PIN A1
-#define RTC_INT_PIN 12
 
+//Loom
 Manager manager(DEVICE_NAME, NODE_NUMBER);
 Loom_Hypnos hypnos(manager, HYPNOS_VERSION::V3_3, TIME_ZONE::PST);
-
+//Loom Sensors
 Loom_Analog analog(manager);
 Loom_SHT31 sht(manager);
-Loom_Neopixel statusLight(manager);
+Loom_Neopixel statusLight(manager); // using channel 2 (physical pin A2)
 Loom_LoRa lora(manager, NODE_NUMBER);
+
 AS5311 magnetSensor(AS5311_CS, AS5311_CLK, AS5311_DO);
 
 // Global Variables
@@ -55,28 +53,15 @@ bool checkStableAlignment();
 void displayMagnetStatus(magnetStatus);
 void flashColor(uint8_t r, uint8_t g, uint8_t b);
 
-void ISR_RTC()
-{
-    hypnos.wakeup();
-}
-
-void ISR_BUTTON()
-{
-    buttonPressed = true;
-    hypnos.wakeup();
-}
-
 /**
  * Program setup
  */
 void setup()
 {
-    // Enable pullup on button pin. this is necessary for the interrupt
-    pinMode(BUTTON_PIN, INPUT_PULLUP);
+    pinMode(BUTTON_PIN, INPUT_PULLUP); // Enable pullup on button pin. this is necessary for the interrupt
 
     delay(1000);
-    // wait for serial connection ONLY button is pressed (low reading)
-    manager.beginSerial(!digitalRead(BUTTON_PIN));
+    manager.beginSerial(!digitalRead(BUTTON_PIN)); // wait for serial connection ONLY button is pressed (low reading)
 
     hypnos.setLogName(DEVICE_NAME + "--");
     hypnos.enable();
@@ -142,16 +127,18 @@ void measureVPD()
     manager.addData("SHT31", "VPD", VPD);
 }
 
+/**
+ * transmit the current data packet over LoRa
+ * loop counter starts high so an initial transmission can be triggered by pressing the button
+ * (the first transmission will happen the second time this function is called)
+ */
 void transmitLora()
 {
-    // loop counter starts high so an initial transmission can be triggered by pressing the button
     static uint8_t loopCounter = TRANSMIT_INTERVAL - 2;
     loopCounter++;
     if (loopCounter >= TRANSMIT_INTERVAL)
     {
-#ifndef DISABLE_LORA_TX
         lora.send(0);
-#endif
         loopCounter = 0;
     }
 }
@@ -171,6 +158,18 @@ void sleepCycle()
     detachInterrupt(digitalPinToInterrupt(BUTTON_PIN));
 }
 
+// Interrupt routines
+void ISR_RTC()
+{
+    hypnos.wakeup();
+}
+
+void ISR_BUTTON()
+{
+    buttonPressed = true;
+    hypnos.wakeup();
+}
+
 /**
  * Magnet alignment procedure. Displays magnet sensor to user until
  * the magnet is determined to be properly aligned and maintains that alignment
@@ -181,7 +180,7 @@ void alignMagnetSensor()
     magnetStatus status;
     while (1)
     {
-        //Watchdog.reset();
+        // Watchdog.reset();
         status = magnetSensor.getMagnetStatus();
         displayMagnetStatus(status);
         delay(100);
@@ -221,9 +220,9 @@ void displayMagnetStatus(magnetStatus status)
  */
 void flashColor(uint8_t r, uint8_t g, uint8_t b)
 {
-    for (int i = 0; i < 6; i++)
+    for (auto _ = 6; _--;)
     {
-        //Watchdog.reset();
+        // Watchdog.reset();
         statusLight.set_color(2, 0, r, g, b);
         delay(250);
         statusLight.set_color(2, 0, 0, 0, 0); // off
@@ -237,13 +236,13 @@ void flashColor(uint8_t r, uint8_t g, uint8_t b)
  */
 bool checkStableAlignment()
 {
-    const unsigned int CHECK_TIME = 4000;
+    const unsigned int CHECK_TIME = 3000;
     magnetStatus status;
     bool aligned = true;
 
     for (int i = 0; i < (CHECK_TIME / 100); i++)
     {
-        //Watchdog.reset();
+        // Watchdog.reset();
         status = magnetSensor.getMagnetStatus();
         if (status != magnetStatus::green)
         {
@@ -262,10 +261,6 @@ bool checkStableAlignment()
 void checkMagnetSensor()
 {
     uint32_t data = magnetSensor.getRawData();
-    // Serial.print("Checking magnet sensor... serial data is: ");
-    // Serial.println(data, BIN);
-    // Serial.print("Even parity? ");
-    // Serial.println(__builtin_parity(data) == 0);
     if (__builtin_parity(data) == 0 && data != 0) //__builtin_parity() returns 0 if value has even parity
         return;
     for (auto _ = 6; _--;)
