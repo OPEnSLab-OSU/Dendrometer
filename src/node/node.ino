@@ -4,6 +4,8 @@
 #include <Sensors/Loom_Analog/Loom_Analog.h>
 #include <Sensors/I2C/Loom_SHT31/Loom_SHT31.h>
 #include <Radio/Loom_LoRa/Loom_LoRa.h>
+#include <Internet/Connectivity/Loom_Wifi/Loom_Wifi.h>
+#include <Internet/Logging/Loom_MQTT/Loom_MQTT.h>
 
 #include "AS5311.h"
 
@@ -11,8 +13,11 @@
 /* DEVICE CONFIGURATION */
 //////////////////////////
 static const uint8_t NODE_NUMBER = 123;
-static const String DEVICE_NAME = "Dend4";
-// These two time values are added together to determine the measurement interval
+static const String DEVICE_NAME = "Dendrometer_";
+////Select one wireless communication option
+// #define DENDROMETER_LORA
+// #define DENDROMETER_WIFI
+////These two time values are added together to determine the measurement interval
 static const int8_t MEASUREMENT_INTERVAL_MINUTES = 15;
 static const int8_t MEASUREMENT_INTERVAL_SECONDS = 0;
 static const uint8_t TRANSMIT_INTERVAL = 16; // to save power, only transmit a packet every X measurements
@@ -25,16 +30,30 @@ static const uint8_t TRANSMIT_INTERVAL = 16; // to save power, only transmit a p
 #define AS5311_DO A4
 #define BUTTON_PIN A1
 
-//Loom
+// Loom
 Manager manager(DEVICE_NAME, NODE_NUMBER);
 Loom_Hypnos hypnos(manager, HYPNOS_VERSION::V3_3, TIME_ZONE::PST);
-//Loom Sensors
+// Loom Sensors
 Loom_Analog analog(manager);
 Loom_SHT31 sht(manager);
 Loom_Neopixel statusLight(manager); // using channel 2 (physical pin A2)
-Loom_LoRa lora(manager, NODE_NUMBER);
 
+// magnet sensor
 AS5311 magnetSensor(AS5311_CS, AS5311_CLK, AS5311_DO);
+
+// wireless
+#if defined DENDROMETER_LORA && defined DENDROMETER_WIFI
+#error Choose ONE wireless communication protocol.
+#elif defined DENDROMETER_LORA
+Loom_LoRa lora(manager, NODE_NUMBER);
+#elif defined DENDROMETER_WIFI
+#include "credentials/arduino_secrets.h"
+Loom_WIFI wifi(manager, CommunicationMode::CLIENT, SECRET_SSID, SECRET_PASS);
+Loom_MQTT mqtt(manager, wifi.getClient(), SECRET_BROKER, SECRET_PORT, MQTT_DATABASE, BROKER_USER, BROKER_PASS);
+Loom_BatchSD batchSD(hypnos, TRANSMIT_INTERVAL);
+#else
+#warning Wireless communication disabled!
+#endif
 
 // Global Variables
 volatile bool buttonPressed = false; // Check to see if button was pressed
@@ -45,7 +64,7 @@ void ISR_BUTTON();
 
 void measure();
 void measureVPD();
-void transmitLora();
+void transmit();
 
 void checkMagnetSensor();
 void alignMagnetSensor();
@@ -58,13 +77,17 @@ void flashColor(uint8_t r, uint8_t g, uint8_t b);
  */
 void setup()
 {
-    pinMode(BUTTON_PIN, INPUT_PULLUP); // Enable pullup on button pin. this is necessary for the interrupt
-
+    pinMode(BUTTON_PIN, INPUT_PULLUP);             // Enable pullup on button pin. this is necessary for the interrupt (and the button check on the next line)
     delay(1000);
     manager.beginSerial(!digitalRead(BUTTON_PIN)); // wait for serial connection ONLY button is pressed (low reading)
 
     hypnos.setLogName(DEVICE_NAME + "--");
     hypnos.enable();
+#if defined DENDROMETER_WIFI
+    // wifi.setBatchSD(batchSD);
+    wifi.loadConfigFromJSON(hypnos.readFile("wifi_creds.json"));
+    mqtt.loadConfigFromJSON(hypnos.readFile("mqtt_creds.json"));
+#endif
     manager.initialize();
 
     checkMagnetSensor();
@@ -86,7 +109,7 @@ void loop()
         statusLight.set_color(2, 0, 0, 0, 0); // LED Off
         buttonPressed = false;
     }
-    transmitLora();
+    transmit();
     sleepCycle(); // bug: device will display status for two sleep cycles instead of one when the button is pressed
 }
 
@@ -132,13 +155,17 @@ void measureVPD()
  * loop counter starts high so an initial transmission can be triggered by pressing the button
  * (the first transmission will happen the second time this function is called)
  */
-void transmitLora()
+void transmit()
 {
     static uint8_t loopCounter = TRANSMIT_INTERVAL - 2;
     loopCounter++;
     if (loopCounter >= TRANSMIT_INTERVAL)
     {
+#if defined DENDROMETER_LORA
         lora.send(0);
+#elif defined DENDROMETER_WIFI
+        mqtt.publish(); // mqtt.publish(batchSD);
+#endif
         loopCounter = 0;
     }
 }
