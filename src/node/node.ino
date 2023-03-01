@@ -1,4 +1,4 @@
-#include <Loom_Manager.h>
+#include <Loom_Manager.h>   //297dc9b
 #include <Hardware/Loom_Hypnos/Loom_Hypnos.h>
 #include <Hardware/Actuators/Loom_Neopixel/Loom_Neopixel.h>
 #include <Sensors/Loom_Analog/Loom_Analog.h>
