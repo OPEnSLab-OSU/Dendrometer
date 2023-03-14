@@ -1,8 +1,8 @@
-#include <Loom_Manager.h>   //297dc9b
+#include <Loom_Manager.h>
 #include <Hardware/Loom_Hypnos/Loom_Hypnos.h>
 #include <Hardware/Actuators/Loom_Neopixel/Loom_Neopixel.h>
 #include <Sensors/Loom_Analog/Loom_Analog.h>
-#include <Sensors/I2C/Loom_SHT31/Loom_SHT31.h>
+#include <Sensors/I2C/Loom_SHT31/Loom_SHT31.h> 
 #include <Radio/Loom_LoRa/Loom_LoRa.h>
 #include <Internet/Connectivity/Loom_Wifi/Loom_Wifi.h>
 #include <Internet/Logging/Loom_MQTT/Loom_MQTT.h>
@@ -13,14 +13,14 @@
 /* DEVICE CONFIGURATION */
 //////////////////////////
 static const uint8_t NODE_NUMBER = 123;
-static const String DEVICE_NAME = "Dendrometer_";
+static const char * DEVICE_NAME = "Dendrometer";
 ////Select one wireless communication option
 // #define DENDROMETER_LORA
-// #define DENDROMETER_WIFI
+ #define DENDROMETER_WIFI
 ////These two time values are added together to determine the measurement interval
-static const int8_t MEASUREMENT_INTERVAL_MINUTES = 15;
+static const int8_t MEASUREMENT_INTERVAL_MINUTES = 2;
 static const int8_t MEASUREMENT_INTERVAL_SECONDS = 0;
-static const uint8_t TRANSMIT_INTERVAL = 16; // to save power, only transmit a packet every X measurements
+static const uint8_t TRANSMIT_INTERVAL = 5; // to save power, only transmit a packet every X measurements
 //////////////////////////
 //////////////////////////
 
@@ -81,10 +81,11 @@ void setup()
     delay(1000);
     manager.beginSerial(!digitalRead(BUTTON_PIN)); // wait for serial connection ONLY button is pressed (low reading)
 
-    hypnos.setLogName(DEVICE_NAME + "--");
+    //hypnos.setLogName("dendrometerData");
+
     hypnos.enable();
 #if defined DENDROMETER_WIFI
-    // wifi.setBatchSD(batchSD);
+    wifi.setBatchSD(batchSD);
     wifi.loadConfigFromJSON(hypnos.readFile("wifi_creds.json"));
     mqtt.loadConfigFromJSON(hypnos.readFile("mqtt_creds.json"));
 #endif
@@ -121,15 +122,16 @@ void measure()
 {
     manager.measure();
     manager.package();
+
     measureVPD();
     magnetSensor.measure(manager);
-
     // Log whether system woke up from button or not
     manager.addData("Button", "Pressed?", buttonPressed);
 
-    manager.display_data();
-
     hypnos.logToSD();
+
+    //delay(5000);
+    //manager.display_data();
 }
 
 /**
@@ -157,17 +159,17 @@ void measureVPD()
  */
 void transmit()
 {
+#if defined DENDROMETER_LORA
     static uint8_t loopCounter = TRANSMIT_INTERVAL - 2;
     loopCounter++;
     if (loopCounter >= TRANSMIT_INTERVAL)
     {
-#if defined DENDROMETER_LORA
         lora.send(0);
-#elif defined DENDROMETER_WIFI
-        mqtt.publish(); // mqtt.publish(batchSD);
-#endif
         loopCounter = 0;
     }
+#elif defined DENDROMETER_WIFI
+    mqtt.publish(batchSD);
+#endif
 }
 
 /**

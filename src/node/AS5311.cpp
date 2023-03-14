@@ -61,7 +61,7 @@ uint32_t AS5311::bitbang(bool angleData = true)
 
     uint32_t data = 0;
     const uint8_t BITS = 18;
-    for (uint8_t i = 0; i < BITS; i++)
+    for (int i = 0; i < BITS; i++)
     {
         delayMicroseconds(DATA_TIMING_US);
         digitalWrite(CLK_PIN, HIGH);
@@ -148,7 +148,7 @@ uint16_t AS5311::getFieldStrength()
 uint16_t AS5311::getFilteredPosition()
 {
     uint16_t average = 0;
-    for (uint8_t i = 0; i < AVERAGE_MEASUREMENTS; i++)
+    for (int i = 0; i < AVERAGE_MEASUREMENTS; i++)
     {
         average += getPosition();
     }
@@ -161,17 +161,18 @@ uint16_t AS5311::getFilteredPosition()
  */
 void AS5311::measure(Manager &manager)
 {
-    int pos = (int)getFilteredPosition();
+    int filteredPosition = (int)getFilteredPosition();
 
     recordMagnetStatus(manager);
     manager.addData("AS5311", "mag", getFieldStrength());
-    manager.addData("AS5311", "pos", pos);
-    manager.addData("displacement", "um", measureDisplacement(pos));
+    manager.addData("AS5311", "pos_raw", (int)getPosition());
+    manager.addData("AS5311", "pos_avg", filteredPosition);
+    manager.addData("displacement", "um", measureDisplacement(filteredPosition));
 }
 
 /**
  * Calculate the displacement of the magnet given a position.
- * Keeps a persistant count of sensor range overflows
+ * Keeps a persistent count of sensor range overflows
  * Moving the sensor too much (about 1mm) in between calls to this function will result in invalid data.
  */
 float AS5311::measureDisplacement(int pos)
