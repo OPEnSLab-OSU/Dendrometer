@@ -18,21 +18,21 @@ static const char * DEVICE_NAME = "Dendrometer";
 // #define DENDROMETER_LORA
  #define DENDROMETER_WIFI
 ////These two time values are added together to determine the measurement interval
-static const int8_t MEASUREMENT_INTERVAL_MINUTES = 2;
+static const int8_t MEASUREMENT_INTERVAL_MINUTES = 15;
 static const int8_t MEASUREMENT_INTERVAL_SECONDS = 0;
-static const uint8_t TRANSMIT_INTERVAL = 5; // to save power, only transmit a packet every X measurements
+static const uint8_t TRANSMIT_INTERVAL = 16; // to save power, only transmit a packet every X measurements
 //////////////////////////
 //////////////////////////
 
 // Pins
-#define AS5311_CS A3 // 9 for LB version
+#define AS5311_CS A3 // 9 for LB version, A3 otherwise
 #define AS5311_CLK A5
 #define AS5311_DO A4
-#define BUTTON_PIN A1
+#define BUTTON_PIN A1  //11 for LB, A1 otherwise
 
 // Loom
 Manager manager(DEVICE_NAME, NODE_NUMBER);
-Loom_Hypnos hypnos(manager, HYPNOS_VERSION::V3_3, TIME_ZONE::PST);
+Loom_Hypnos hypnos(manager, HYPNOS_VERSION::V3_3, TIME_ZONE::PST);  //3_2 for LB, 3_3 otherwise
 // Loom Sensors
 Loom_Analog analog(manager);
 Loom_SHT31 sht(manager);
