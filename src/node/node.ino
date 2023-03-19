@@ -12,15 +12,15 @@
 //////////////////////////
 /* DEVICE CONFIGURATION */
 //////////////////////////
-static const uint8_t NODE_NUMBER = 123;
-static const char * DEVICE_NAME = "Dendrometer";
+static const uint8_t NODE_NUMBER = 255;
+static const char * DEVICE_NAME = "test-UBC-Dendrometer";
 ////Select one wireless communication option
 // #define DENDROMETER_LORA
  #define DENDROMETER_WIFI
 ////These two time values are added together to determine the measurement interval
-static const int8_t MEASUREMENT_INTERVAL_MINUTES = 15;
-static const int8_t MEASUREMENT_INTERVAL_SECONDS = 0;
-static const uint8_t TRANSMIT_INTERVAL = 16; // to save power, only transmit a packet every X measurements
+static const int8_t MEASUREMENT_INTERVAL_MINUTES = 0;
+static const int8_t MEASUREMENT_INTERVAL_SECONDS = 30;
+static const uint8_t TRANSMIT_INTERVAL = 3; // to save power, only transmit a packet every X measurements
 //////////////////////////
 //////////////////////////
 
@@ -36,7 +36,7 @@ Loom_Hypnos hypnos(manager, HYPNOS_VERSION::V3_3, TIME_ZONE::PST);  //3_2 for LB
 // Loom Sensors
 Loom_Analog analog(manager);
 Loom_SHT31 sht(manager);
-Loom_Neopixel statusLight(manager); // using channel 2 (physical pin A2)
+Loom_Neopixel statusLight(manager, false, false, true, NEO_GRB); // using channel 2 (physical pin A2). use RGB for through-hole devices
 
 // magnet sensor
 AS5311 magnetSensor(AS5311_CS, AS5311_CLK, AS5311_DO);
@@ -78,7 +78,7 @@ void flashColor(uint8_t r, uint8_t g, uint8_t b);
 void setup()
 {
     pinMode(BUTTON_PIN, INPUT_PULLUP);             // Enable pullup on button pin. this is necessary for the interrupt (and the button check on the next line)
-    delay(1000);
+    delay(10);
     manager.beginSerial(!digitalRead(BUTTON_PIN)); // wait for serial connection ONLY button is pressed (low reading)
 
     //hypnos.setLogName("dendrometerData");
@@ -179,8 +179,8 @@ void sleepCycle()
 {
     hypnos.setInterruptDuration(TimeSpan(0, 0, MEASUREMENT_INTERVAL_MINUTES, MEASUREMENT_INTERVAL_SECONDS));
     // Reattach to the interrupt after we have set the alarm so we can have repeat triggers
-    attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), ISR_BUTTON, FALLING);
     hypnos.reattachRTCInterrupt();
+    attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), ISR_BUTTON, FALLING);
 
     // Put the device into a deep sleep, operation HALTS here until the interrupt is triggered
     hypnos.sleep();
@@ -228,7 +228,7 @@ void displayMagnetStatus(magnetStatus status)
     switch (status)
     {
     case magnetStatus::yellow:
-        statusLight.set_color(2, 0, 255, 255, 0); // yellow
+        statusLight.set_color(2, 0, 255, 100, 0); // yellow
         break;
     case magnetStatus::green:
         statusLight.set_color(2, 0, 0, 255, 0); // green
