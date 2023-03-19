@@ -18,9 +18,9 @@ static const char * DEVICE_NAME = "test-UBC-Dendrometer";
 // #define DENDROMETER_LORA
  #define DENDROMETER_WIFI
 ////These two time values are added together to determine the measurement interval
-static const int8_t MEASUREMENT_INTERVAL_MINUTES = 0;
-static const int8_t MEASUREMENT_INTERVAL_SECONDS = 30;
-static const uint8_t TRANSMIT_INTERVAL = 3; // to save power, only transmit a packet every X measurements
+static const int8_t MEASUREMENT_INTERVAL_MINUTES = 15;
+static const int8_t MEASUREMENT_INTERVAL_SECONDS = 0;
+static const uint8_t TRANSMIT_INTERVAL = 8; // to save power, only transmit a packet every X measurements
 //////////////////////////
 //////////////////////////
 
@@ -66,6 +66,7 @@ void measure();
 void measureVPD();
 void transmit();
 
+void setRTC(bool);
 void checkMagnetSensor();
 void alignMagnetSensor();
 bool checkStableAlignment();
@@ -79,17 +80,23 @@ void setup()
 {
     pinMode(BUTTON_PIN, INPUT_PULLUP);             // Enable pullup on button pin. this is necessary for the interrupt (and the button check on the next line)
     delay(10);
-    manager.beginSerial(!digitalRead(BUTTON_PIN)); // wait for serial connection ONLY button is pressed (low reading)
+    bool userInput = !digitalRead(BUTTON_PIN); // wait for serial connection ONLY button is pressed (low reading)
+    manager.beginSerial(userInput); // wait for serial connection ONLY button is pressed 
 
     //hypnos.setLogName("dendrometerData");
+
 
     hypnos.enable();
 #if defined DENDROMETER_WIFI
     wifi.setBatchSD(batchSD);
+    wifi.setMaxRetries(2);
+    mqtt.setMaxRetries(1);
     wifi.loadConfigFromJSON(hypnos.readFile("wifi_creds.json"));
     mqtt.loadConfigFromJSON(hypnos.readFile("mqtt_creds.json"));
 #endif
     manager.initialize();
+
+    setRTC(userInput);
 
     checkMagnetSensor();
     alignMagnetSensor();
@@ -168,7 +175,14 @@ void transmit()
         loopCounter = 0;
     }
 #elif defined DENDROMETER_WIFI
-    mqtt.publish(batchSD);
+    if(!batchSD.shouldPublish()) {
+        char output[100];
+        snprintf_P(output, OUTPUT_SIZE, PSTR("<Dendrometer> Not ready to publish. Currently at packet %i of %i"),
+            batchSD.getCurrentBatch(), batchSD.getBatchSize());
+        Serial.println(output);
+    }
+    if(wifi.isConnected())
+        mqtt.publish(batchSD);
 #endif
 }
 
@@ -207,6 +221,8 @@ void ISR_BUTTON()
 void alignMagnetSensor()
 {
     magnetStatus status;
+    
+    Serial.println(F("<Dendrometer> Waiting for magnet alignment"));
     while (1)
     {
         // Watchdog.reset();
@@ -294,4 +310,24 @@ void checkMagnetSensor()
         return;
     for (auto _ = 6; _--;)
         flashColor(255, 100, 0);
+}
+
+
+/**
+ * Ask the user to set a custom time
+ */
+void setRTC(bool wait) 
+{
+    if(!wait || !Serial)
+        return;
+    
+    Serial.println(F("<Dendrometer> Adjust RTC time? (y/n)"));
+    while(!Serial.available());
+    int val = Serial.read();
+    delay(50);
+    while (Serial.available()) Serial.read(); // flush the input buffer to avoid invalid input to rtc function
+
+    if(val == 'y') {
+        hypnos.set_custom_time();
+    }
 }
