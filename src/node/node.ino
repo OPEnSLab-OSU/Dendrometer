@@ -1,4 +1,4 @@
-#include <Loom_Manager.h>
+#include <Loom_Manager.h>   //d1f7c33822dfe79a869f7fe8231597fa980e736b
 #include <Hardware/Loom_Hypnos/Loom_Hypnos.h>
 #include <Hardware/Actuators/Loom_Neopixel/Loom_Neopixel.h>
 #include <Sensors/Loom_Analog/Loom_Analog.h>
@@ -12,8 +12,8 @@
 //////////////////////////
 /* DEVICE CONFIGURATION */
 //////////////////////////
-static const uint8_t NODE_NUMBER = 255;
-static const char * DEVICE_NAME = "test-UBC-Dendrometer";
+static const uint8_t NODE_NUMBER = 1;
+static const char * DEVICE_NAME = "UBC_Dendrometer_";
 ////Select one wireless communication option
 // #define DENDROMETER_LORA
  #define DENDROMETER_WIFI
