@@ -1,4 +1,4 @@
-//change to match desoired wifi network
+//change to match desired wifi network
 #define SECRET_SSID "dend"
 #define SECRET_PASS "12345678"
 
@@ -8,5 +8,5 @@
 //don't modify this
 #define SECRET_BROKER "cas-mosquitto.biossys.oregonstate.edu"
 #define SECRET_PORT 1883
-#define BROKER_USER ""
-#define BROKER_PASS ""
+#define BROKER_USER "User"
+#define BROKER_PASS "password"
