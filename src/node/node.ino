@@ -1,336 +1,333 @@
-#include <Loom.h>
+#include <Loom_Manager.h>   //d1f7c33822dfe79a869f7fe8231597fa980e736b
+#include <Hardware/Loom_Hypnos/Loom_Hypnos.h>
+#include <Hardware/Actuators/Loom_Neopixel/Loom_Neopixel.h>
+#include <Sensors/Loom_Analog/Loom_Analog.h>
+#include <Sensors/I2C/Loom_SHT31/Loom_SHT31.h> 
+#include <Radio/Loom_LoRa/Loom_LoRa.h>
+#include <Internet/Connectivity/Loom_Wifi/Loom_Wifi.h>
+#include <Internet/Logging/Loom_MQTT/Loom_MQTT.h>
+
 #include "AS5311.h"
 
-// Include configuration
-const char* json_config = 
-#include "config.h"
-;
+//////////////////////////
+/* DEVICE CONFIGURATION */
+//////////////////////////
+static const uint8_t NODE_NUMBER = 1;
+static const char * DEVICE_NAME = "DendrometerV4_";
+////Select one wireless communication option
+// #define DENDROMETER_LORA
+ #define DENDROMETER_WIFI
+////These two time values are added together to determine the measurement interval
+static const int8_t MEASUREMENT_INTERVAL_MINUTES = 15;
+static const int8_t MEASUREMENT_INTERVAL_SECONDS = 0;
+static const uint8_t TRANSMIT_INTERVAL = 8; // to save power, only transmit a packet every X measurements
+//////////////////////////
+//////////////////////////
 
-// In Tools menu, set:
-// Internet  > Disabled
-// Sensors   > Enabled
-// Radios    > Enabled
-// Actuators > Enabled
-// Max       > Disabled
+// Pins
+#define AS5311_CS A3 // 9 for LB version, A3 otherwise
+#define AS5311_CLK A5
+#define AS5311_DO A4
+#define BUTTON_PIN A1  //11 for LB, A1 otherwise
 
-using namespace Loom;
+// Loom
+Manager manager(DEVICE_NAME, NODE_NUMBER);
+Loom_Hypnos hypnos(manager, HYPNOS_VERSION::V3_3, TIME_ZONE::PST);  //3_2 for LB, 3_3 otherwise
+// Loom Sensors
+Loom_Analog analog(manager);
+Loom_SHT31 sht(manager);
+Loom_Neopixel statusLight(manager, false, false, true, NEO_GRB); // using channel 2 (physical pin A2). use RGB for through-hole devices
 
-Loom::Manager Feather{};
+// magnet sensor
+AS5311 magnetSensor(AS5311_CS, AS5311_CLK, AS5311_DO);
 
-//Pins
-#define CS A3
-#define CLK A5
-#define DO A4
-#define LED A2
+// wireless
+#if defined DENDROMETER_LORA && defined DENDROMETER_WIFI
+#error Choose ONE wireless communication protocol.
+#elif defined DENDROMETER_LORA
+Loom_LoRa lora(manager, NODE_NUMBER);
+#elif defined DENDROMETER_WIFI
+#include "credentials/arduino_secrets.h"
+Loom_WIFI wifi(manager, CommunicationMode::CLIENT, SECRET_SSID, SECRET_PASS);
+Loom_MQTT mqtt(manager, wifi.getClient(), SECRET_BROKER, SECRET_PORT, MQTT_DATABASE, BROKER_USER, BROKER_PASS);
+Loom_BatchSD batchSD(hypnos, TRANSMIT_INTERVAL);
+#else
+#warning Wireless communication disabled!
+#endif
 
-#define DELAY_IN_SECONDS 0
-#define DELAY_IN_MINUTES 15
-#define INT_BUT A1
-#define RTC_INT_PIN 12
+// Global Variables
+volatile bool buttonPressed = false; // Check to see if button was pressed
 
-#define HYPNOS3 5
-//#define HYPNOS5 6
- 
-//Global Variables
-volatile bool flag = false;   // Interrupt flag
-volatile bool button = false; // Check to see if button was pressed
-uint32_t start = 0;
-uint32_t prevTwoSig = 0;
-float elapsed = 0;
-float prev = 0;
-float prevMicro = 0;
+void sleepCycle();
+void ISR_RTC();
+void ISR_BUTTON();
 
-int loopCounter = 14;         // LoRa counter
-int loraCount = 16;           // How many packets it takes to transmit through LoRa
-                              // { 4 loops = 1 hour; 16 loops = 4 hours }
+void measure();
+void measureVPD();
+void transmit();
 
-void setup() 
+void setRTC(bool);
+void checkMagnetSensor();
+void alignMagnetSensor();
+bool checkStableAlignment();
+void displayMagnetStatus(magnetStatus);
+void flashColor(uint8_t r, uint8_t g, uint8_t b);
+
+/**
+ * Program setup
+ */
+void setup()
 {
-  // Enable waiting for RTC interrupt, MUST use a pullup since signal is active low
-  pinMode(RTC_INT_PIN, INPUT_PULLUP);  
-  pinMode(INT_BUT, INPUT_PULLUP);
-  pinMode(HYPNOS3, OUTPUT);    // Enable control of 3.3V rail
-  //pinMode(HYPNOS5, OUTPUT);   // Enable control of 5V rail
-  pinMode(13, OUTPUT);
+    pinMode(BUTTON_PIN, INPUT_PULLUP);             // Enable pullup on button pin. this is necessary for the interrupt (and the button check on the next line)
+    delay(10);
+    bool userInput = !digitalRead(BUTTON_PIN); // wait for serial connection ONLY button is pressed (low reading)
+    manager.beginSerial(userInput); // wait for serial connection ONLY button is pressed 
 
-  // Initialize Hypnos
-  digitalWrite(HYPNOS3, LOW); // Enable 3.3V rail
-  //digitalWrite(HYPNOS5, HIGH);  // Enable 5V rail
-  digitalWrite(13, HIGH);
+    //hypnos.setLogName("dendrometerData");
 
-  Feather.begin_serial(true);
-  Feather.parse_config(json_config);
-  Feather.print_config();
 
-  // Begin Communication with AS5311
-  init_AS();
+    hypnos.enable();
+#if defined DENDROMETER_WIFI
+    wifi.setBatchSD(batchSD);
+    wifi.setMaxRetries(2);
+    mqtt.setMaxRetries(1);
+    wifi.loadConfigFromJSON(hypnos.readFile("wifi_creds.json"));
+    mqtt.loadConfigFromJSON(hypnos.readFile("mqtt_creds.json"));
+#endif
+    manager.initialize();
 
-  // LED pin set
-  pinMode(LED, OUTPUT);
+    setRTC(userInput);
 
-  // Make sure the magnet is positioned correctly
-  verify_position();
-  
-  // Flash three times for verification
-  green_flash();
- 
-  getInterruptManager(Feather).register_ISR(RTC_INT_PIN, ISR_RTC, LOW, ISR_Type::IMMEDIATE);
-  getInterruptManager(Feather).register_ISR(INT_BUT, ISR_BUT, LOW, ISR_Type::IMMEDIATE);
-  delay(500);
-  
-  // Starting measurement of AS5311
-  serial_init_measure();
+    checkMagnetSensor();
+    alignMagnetSensor();
 
-  // Save 2 most significant bits of start
-  prevTwoSig = start & 0xC00;
-  
-  // Turns off Neopixel
-  getNeopixel(Feather).set_color(2, 0, 0, 0, 0); 
-
-  LPrintln("\n ** Setup Complete ** ");
+    hypnos.registerInterrupt(ISR_RTC);
 }
 
-void loop() 
+/**
+ * Main loop
+ */
+void loop()
 {
-  // Initialize Hypnos
-  digitalWrite(HYPNOS3, LOW); // Enable 3.3V rail
-  //digitalWrite(HYPNOS5, HIGH);  // Enable 5V rail
-  digitalWrite(13, HIGH);
-
-  delay(100);
-
-  // Protocol to turn on AS5311
-  pinMode(CS, OUTPUT);
-  pinMode(CLK, OUTPUT);
-  pinMode(DO, INPUT_PULLUP);
-  digitalWrite(CS, HIGH);
-  digitalWrite(CLK, LOW);
-
-  // Protocol to turn on Neopixel
-  pinMode(LED, OUTPUT);
-
-  // Initialize magnet sensor  
-  init_AS();
-
-  if (flag) {
-    pinMode(23, OUTPUT);
-    pinMode(24, OUTPUT);
-    pinMode(11, OUTPUT);
-  
-    Feather.power_up();
-  }
-
-  // Check to see if button was pressed for LED indicator
-  verify_LED_button();
-
-  // --- Data Management Begin --- 
-
-  int average = measure_average();
-  uint32_t errorBits = getErrorBits(CLK, CS, DO);
-  
-  // Also updates prevTwoSig to two most significant bits of first param, is being passed by ref
-  elapsed = computeElapsed(average, prevTwoSig, elapsed);
-
-  // Computes total distance in mm and um
-  float distance = (elapsed + ((2.0 * ((int)average - (int)start)) / 4095.0));
-  float distanceMicro = (elapsed * 1000) + ((2000 * ((int)average - (int)start)) / 4095.0);
-  float difference = 0;
-  float differenceMicro = 0;
-
-  // Reads the movement if any, else it sets the distance to 0
-  if (distance != prev)
-    difference = distance - prev;
-
-  if (distanceMicro != prevMicro)
-    differenceMicro = distanceMicro - prevMicro;
-
-  Feather.measure();
-  Feather.package();
-
-  Feather.add_data("AS5311", "Serial_Value", average);
-  Feather.add_data("Displacement_mm", "mm", distance);
-  Feather.add_data("Displacement_um", "um", distanceMicro);
-  Feather.add_data("Difference_mm", "mm", difference);
-  Feather.add_data("Difference_um", "um", differenceMicro);
-
-  // Logs the status of the magnet position (whether the data is good or not) {Green = Good readings, Red = Bad readings}
-  // Ignores the parity bit (last bit)
-  // Datasheet: https://www.mouser.com/pdfdocs/AS5311_Datasheet_EN_v6-914614.pdf
-  // Read sections 7.3 and 7.5 of datasheet for more information on error bit values
-  
-  if (errorBits >= 16 && errorBits <= 18)          // Error bits: 10000, 10001, 10010
-    Feather.add_data("Status", "Color", "Green");
-  else if (errorBits == 19)                        // Error bits: 10011
-    Feather.add_data("Status", "Color", "Yellow");
-  else if (errorBits == 23)                        // Error bits: 10111
-    Feather.add_data("Status", "Color", "Red");
-  else if (errorBits < 16)                         // If OCF Bit is 0
-    Feather.add_data("Status", "Color", "OCF_Error");
-  else if (errorBits > 24)                         // If COF Bit is 1
-    Feather.add_data("Status", "Color", "COF_Error");
-  else
-    Feather.add_data("Status", "Color", "Other_Error");
-  
-  // Calculate VPD based on temperature and humidity
-  float SVP, VPD, temp, humid;
-  float e = 2.71828;
-
-  temp = Feather.get<Loom::SHT31D>()->get_temperature();
-  humid = Feather.get<Loom::SHT31D>()->get_humid();
-  
-  SVP = (0.61078 * pow(e, (17.2694 * temp) / (temp + 237.3)));
-  VPD = SVP * (1 - (humid / 100));
-
-  Feather.add_data("VPD", "VPD", VPD);
-
-  // Log RSSI value from LoRa communication
-  float rssi = Feather.get<Loom::LoRa>()->get_signal_strength();
-  Feather.add_data("RSSI", "RSSI", rssi);
-
-  // Log whether system woke up from button or not
-  Feather.add_data("Button", "Pressed?", button);
-
-  prev = distance;
-  prevMicro = distanceMicro;
-
-  // --- Data Management End ---
-
-  Feather.display_data();
-
-  // Log SD in case it doesn't send
-  getSD(Feather).log();
-
-  loopCounter++;
-
-  // Send data to address 0 after set amount of packets
-  if (loopCounter == loraCount) {
-    getLoRa(Feather).send(0);
-    loopCounter = 0;
-  }
-
-  // Resetting interrupt
-  flag = false, button = false;
-
-  getInterruptManager(Feather).RTC_alarm_duration(TimeSpan(0,0,DELAY_IN_MINUTES,DELAY_IN_SECONDS));
-  getInterruptManager(Feather).reconnect_interrupt(RTC_INT_PIN);
-  getInterruptManager(Feather).reconnect_interrupt(INT_BUT);
-
-  Feather.power_down();
-
-  // Protocol to shut down AS5311
-  pinMode(CLK, INPUT);
-  pinMode(DO, INPUT);
-  pinMode(CS, INPUT);
-
-  // Protocol to shut off Neopixel
-  pinMode(LED, INPUT); 
-
-  // Protocol to turn off Hypnos
-  digitalWrite(13, LOW);
-  digitalWrite(HYPNOS3, HIGH);
-  //digitalWrite(HYPNOS5, LOW); 
-
-  // Protocol to shut down SD
-  pinMode(23, INPUT);
-  pinMode(24, INPUT);
-  pinMode(11, INPUT);
-  
-  getSleepManager(Feather).sleep();
-  while (!flag);
+    measure();
+    if (buttonPressed) // if interrupt button was pressed, display staus of magnet sensor
+    {
+        displayMagnetStatus(magnetSensor.getMagnetStatus());
+        delay(3000);
+        statusLight.set_color(2, 0, 0, 0, 0); // LED Off
+        buttonPressed = false;
+    }
+    transmit();
+    sleepCycle(); // bug: device will display status for two sleep cycles instead of one when the button is pressed
 }
 
-// --- AS5311 functions ---
+/**
+ * Perform all measurements for the dendrometer and put them into a packet.
+ * Log to SD card.
+ */
+void measure()
+{
+    manager.measure();
+    manager.package();
 
-// Protocol to turn on AS5311
-void init_AS(){
-  pinMode(CS, OUTPUT);
-  pinMode(CLK, OUTPUT);
-  pinMode(DO, INPUT_PULLUP);
-  digitalWrite(CS, HIGH);
-  digitalWrite(CLK, LOW);
-  delay(2000);
+    measureVPD();
+    magnetSensor.measure(manager);
+    // Log whether system woke up from button or not
+    manager.addData("Button", "Pressed?", buttonPressed);
+
+    hypnos.logToSD();
+
+    //delay(5000);
+    //manager.display_data();
 }
 
-// Takes 16 data measurements and averages them for normal reading
-int measure_average(){
-  int average = 0;
-  for (int j = 0; j < 16; j++)
-  {
-    average += getSerialPosition(CLK, CS, DO);
-  }
-  average /= 16;
-  return average;
+/**
+ * Log readings from the SHT31 sensor. Also calculate and log VPD.
+ */
+void measureVPD()
+{
+    float SVP, VPD, temperature, humidity;
+    float e = 2.71828;
+
+    temperature = sht.getTemperature();
+    humidity = sht.getHumidity();
+
+    // Tetens equation
+    SVP = (0.61078 * pow(e, (17.2694 * temperature) / (temperature + 237.3)));
+    VPD = SVP * (1 - (humidity / 100));
+
+    manager.addData("SHT31", "VPD", VPD);
 }
 
-// Takes 16 measurements and averages them for the starting serial value (0-4095 value)
-void serial_init_measure(){
-  for (int j = 0; j < 16; j++)
-  {
-    start += getSerialPosition(CLK, CS, DO);
-  }
-  start /= 16; 
+/**
+ * transmit the current data packet over LoRa
+ * loop counter starts high so an initial transmission can be triggered by pressing the button
+ * (the first transmission will happen the second time this function is called)
+ */
+void transmit()
+{
+#if defined DENDROMETER_LORA
+    static uint8_t loopCounter = TRANSMIT_INTERVAL - 2;
+    loopCounter++;
+    if (loopCounter >= TRANSMIT_INTERVAL)
+    {
+        lora.send(0);
+        loopCounter = 0;
+    }
+#elif defined DENDROMETER_WIFI
+    if(!batchSD.shouldPublish()) {
+        char output[100];
+        snprintf_P(output, OUTPUT_SIZE, PSTR("<Dendrometer> Not ready to publish. Currently at packet %i of %i"),
+            batchSD.getCurrentBatch(), batchSD.getBatchSize());
+        Serial.println(output);
+    }
+    if(wifi.isConnected())
+        mqtt.publish(batchSD);
+#endif
 }
 
-// Lights up LED if interrupt button is pressed
-void verify_LED_button(){
-  if (button)
-  {
-    uint32_t ledCheck = getErrorBits(CLK, CS, DO);
+/**
+ * Shut down the device for a specified time period to save power.
+ */
+void sleepCycle()
+{
+    hypnos.setInterruptDuration(TimeSpan(0, 0, MEASUREMENT_INTERVAL_MINUTES, MEASUREMENT_INTERVAL_SECONDS));
+    // Reattach to the interrupt after we have set the alarm so we can have repeat triggers
+    hypnos.reattachRTCInterrupt();
+    attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), ISR_BUTTON, FALLING);
 
-    if (ledCheck >= 16 && ledCheck <= 18)
-      getNeopixel(Feather).set_color(2, 0, 200, 0, 0);   // Green
-    else if (ledCheck == 19)
-      getNeopixel(Feather).set_color(2, 0, 200, 200, 0); // Yellow
-    else
-      getNeopixel(Feather).set_color(2, 0, 0, 200, 0);   // Red
-
-    delay(3000);
-    getNeopixel(Feather).set_color(2, 0, 0, 0, 0);       // LED Off
-  }
+    // Put the device into a deep sleep, operation HALTS here until the interrupt is triggered
+    hypnos.sleep();
+    detachInterrupt(digitalPinToInterrupt(BUTTON_PIN));
 }
 
-// Ensures that magnet starts in good position before continuing program
-void verify_position(){
-  uint32_t ledCheck = getErrorBits(CLK, CS, DO); // Tracking magnet position for indicator
-
-  while (ledCheck < 16 || ledCheck > 18)
-  {
-    if (ledCheck == 19)
-      getNeopixel(Feather).set_color(2, 0, 200, 200, 0); // Changes Neopixel to yellow
-    else
-      getNeopixel(Feather).set_color(2, 0, 0, 200, 0); // Changes Neopixel to red
-
-    delay(3000); // Gives user 3 seconds to adjust magnet before next reading
-    ledCheck = getErrorBits(CLK, CS, DO);
-  }
-}
-
-// Flashes green on Neopixel 3 times
-void green_flash(){
-  for (int i = 0; i < 3; i++)
-  {
-
-    getNeopixel(Feather).set_color(2, 0, 200, 0, 0); // Changes Neopixel to green
-    delay(500);
-
-    getNeopixel(Feather).set_color(2, 0, 0, 0, 0); // Turns off Neopixel
-    delay(500);
-  }
-}
-
-// --- Interrupt Functions ---
-
-// RTC interrupt
+// Interrupt routines
 void ISR_RTC()
 {
-  detachInterrupt(RTC_INT_PIN);
-  flag = true;
+    hypnos.wakeup();
 }
 
-// Button interrupt
-void ISR_BUT()
+void ISR_BUTTON()
 {
-  detachInterrupt(INT_BUT);
-  flag = true;
-  button = true;
+    buttonPressed = true;
+    hypnos.wakeup();
+}
+
+/**
+ * Magnet alignment procedure. Displays magnet sensor to user until
+ * the magnet is determined to be properly aligned and maintains that alignment
+ * for a certain amount of time
+ */
+void alignMagnetSensor()
+{
+    magnetStatus status;
+    
+    Serial.println(F("<Dendrometer> Waiting for magnet alignment"));
+    while (1)
+    {
+        // Watchdog.reset();
+        status = magnetSensor.getMagnetStatus();
+        displayMagnetStatus(status);
+        delay(100);
+        if (status == magnetStatus::green && checkStableAlignment())
+            break;
+    }
+    flashColor(0, 255, 0);
+}
+
+/**
+ * Check the magnet sensor alignment status and display it on the multi-color LED
+ * @param   status  the magnetStatus to display
+ */
+void displayMagnetStatus(magnetStatus status)
+{
+    switch (status)
+    {
+    case magnetStatus::yellow:
+        statusLight.set_color(2, 0, 255, 100, 0); // yellow
+        break;
+    case magnetStatus::green:
+        statusLight.set_color(2, 0, 0, 255, 0); // green
+        break;
+    case magnetStatus::error: // Fall through
+    case magnetStatus::red:   // Fall through
+    default:
+        statusLight.set_color(2, 0, 255, 0, 0); // red
+        break;                                  // do nothing
+    }
+}
+
+/**
+ * Flashes status light
+ * @param   r   red color value (unsigned 8 bit number)
+ * @param   g   green color value (unsigned 8 bit number)
+ * @param   b   blue color value (unsigned 8 bit number)
+ */
+void flashColor(uint8_t r, uint8_t g, uint8_t b)
+{
+    for (auto _ = 6; _--;)
+    {
+        // Watchdog.reset();
+        statusLight.set_color(2, 0, r, g, b);
+        delay(250);
+        statusLight.set_color(2, 0, 0, 0, 0); // off
+        delay(250);
+    }
+}
+
+/**
+ * Make sure calibration is stable before proceeding
+ * Returns true if the sensor remains aligned for the next five seconds
+ */
+bool checkStableAlignment()
+{
+    const unsigned int CHECK_TIME = 3000;
+    magnetStatus status;
+    bool aligned = true;
+
+    for (int i = 0; i < (CHECK_TIME / 100); i++)
+    {
+        // Watchdog.reset();
+        status = magnetSensor.getMagnetStatus();
+        if (status != magnetStatus::green)
+        {
+            aligned = false;
+            break;
+        }
+        delay(100);
+    }
+
+    return aligned;
+}
+
+/**
+ * Checks to see if a magnet sensor is connected and functioning.
+ */
+void checkMagnetSensor()
+{
+    uint32_t data = magnetSensor.getRawData();
+    if (__builtin_parity(data) == 0 && data != 0) //__builtin_parity() returns 0 if value has even parity
+        return;
+    for (auto _ = 6; _--;)
+        flashColor(255, 100, 0);
+}
+
+
+/**
+ * Ask the user to set a custom time
+ */
+void setRTC(bool wait) 
+{
+    if(!wait || !Serial)
+        return;
+    
+    Serial.println(F("<Dendrometer> Adjust RTC time? (y/n)"));
+    while(!Serial.available());
+    int val = Serial.read();
+    delay(50);
+    while (Serial.available()) Serial.read(); // flush the input buffer to avoid invalid input to rtc function
+
+    if(val == 'y') {
+        hypnos.set_custom_time();
+    }
 }
