@@ -13,7 +13,7 @@
 /* DEVICE CONFIGURATION */
 //////////////////////////
 static const uint8_t NODE_NUMBER = 1;
-static const char * DEVICE_NAME = "UBC_Dendrometer_";
+static const char * DEVICE_NAME = "DendrometerV4_";
 ////Select one wireless communication option
 // #define DENDROMETER_LORA
  #define DENDROMETER_WIFI
