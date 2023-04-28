@@ -182,8 +182,10 @@ float AS5311::measureDisplacement(int pos)
     static const float POLE_PAIR_LENGTH_UM = 2000.0; // 2mm == 2000um
     static const float UM_PER_TICK = POLE_PAIR_LENGTH_UM / TICKS;
 
-    if (initialPosition == -1) // initial position has not been measured
+    if (initialPosition == -1) { // initial position has not been measured
         initialPosition = pos;
+        lastPosition = pos;
+    }
     int magnetPosition = pos;
 
     int difference = magnetPosition - lastPosition;

@@ -1,4 +1,4 @@
-#include <Loom_Manager.h>   //d1f7c33822dfe79a869f7fe8231597fa980e736b
+#include <Loom_Manager.h>   //4.3
 #include <Hardware/Loom_Hypnos/Loom_Hypnos.h>
 #include <Hardware/Actuators/Loom_Neopixel/Loom_Neopixel.h>
 #include <Sensors/Loom_Analog/Loom_Analog.h>
@@ -15,12 +15,12 @@
 static const uint8_t NODE_NUMBER = 1;
 static const char * DEVICE_NAME = "DendrometerV4_";
 ////Select one wireless communication option
-// #define DENDROMETER_LORA
- #define DENDROMETER_WIFI
+#define DENDROMETER_LORA
+// #define DENDROMETER_WIFI
 ////These two time values are added together to determine the measurement interval
 static const int8_t MEASUREMENT_INTERVAL_MINUTES = 15;
 static const int8_t MEASUREMENT_INTERVAL_SECONDS = 0;
-static const uint8_t TRANSMIT_INTERVAL = 8; // to save power, only transmit a packet every X measurements
+static const uint8_t TRANSMIT_INTERVAL = 16; // to save power, only transmit a packet every X measurements
 //////////////////////////
 //////////////////////////
 
@@ -36,7 +36,7 @@ Loom_Hypnos hypnos(manager, HYPNOS_VERSION::V3_3, TIME_ZONE::PST);  //3_2 for LB
 // Loom Sensors
 Loom_Analog analog(manager);
 Loom_SHT31 sht(manager);
-Loom_Neopixel statusLight(manager, false, false, true, NEO_GRB); // using channel 2 (physical pin A2). use RGB for through-hole devices
+Loom_Neopixel statusLight(manager, false, false, true, NEO_RGB); // using channel 2 (physical pin A2). use RGB for through-hole devices
 
 // magnet sensor
 AS5311 magnetSensor(AS5311_CS, AS5311_CLK, AS5311_DO);
