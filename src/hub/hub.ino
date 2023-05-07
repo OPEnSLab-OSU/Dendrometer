@@ -14,7 +14,6 @@
 
 Manager manager("Hub", 0);
 
-// Do we want to use the instance number as the LoRa address
 Loom_Hypnos hypnos(manager, HYPNOS_VERSION::V3_3, TIME_ZONE::PST);
 Loom_LoRa lora(manager);
 Loom_LTE lte(manager, "hologram", "", "", A5);
@@ -27,13 +26,15 @@ void setup(){
     // Enable the power rails on the hypnos
     hypnos.enable();
 
+    //load MQTT credentials from the SD card, if they exist
+    mqtt.loadConfigFromJSON(hypnos.readFile("mqtt_creds.json"));
+
     // Initialize the modules
     manager.initialize();
 }
 
 void loop()
 {
-
     // Wait 5 seconds for a message
     if (lora.receive(5000))
     {
