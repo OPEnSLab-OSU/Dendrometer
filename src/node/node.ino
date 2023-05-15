@@ -1,8 +1,9 @@
-#include <Loom_Manager.h>   //4.3
+#include <Loom_Manager.h> //4.3
 #include <Hardware/Loom_Hypnos/Loom_Hypnos.h>
 #include <Hardware/Actuators/Loom_Neopixel/Loom_Neopixel.h>
 #include <Sensors/Loom_Analog/Loom_Analog.h>
-#include <Sensors/I2C/Loom_SHT31/Loom_SHT31.h> 
+#include <Sensors/Analog/Loom_Teros10/Loom_Teros10.h>
+#include <Sensors/I2C/Loom_SHT31/Loom_SHT31.h>
 #include <Radio/Loom_LoRa/Loom_LoRa.h>
 #include <Internet/Connectivity/Loom_Wifi/Loom_Wifi.h>
 #include <Internet/Logging/Loom_MQTT/Loom_MQTT.h>
@@ -21,6 +22,8 @@ static const char * DEVICE_NAME = "DendrometerV4_";
 static const int8_t MEASUREMENT_INTERVAL_MINUTES = 15;
 static const int8_t MEASUREMENT_INTERVAL_SECONDS = 0;
 static const uint8_t TRANSMIT_INTERVAL = 16; // to save power, only transmit a packet every X measurements
+////Use teros 10?
+#define DENDROMETER_TEROS10
 //////////////////////////
 //////////////////////////
 
@@ -28,13 +31,16 @@ static const uint8_t TRANSMIT_INTERVAL = 16; // to save power, only transmit a p
 #define AS5311_CS A3 // 9 for LB version, A3 otherwise
 #define AS5311_CLK A5
 #define AS5311_DO A4
-#define BUTTON_PIN A1  //11 for LB, A1 otherwise
+#define BUTTON_PIN A1 // 11 for LB, A1 otherwise
 
 // Loom
 Manager manager(DEVICE_NAME, NODE_NUMBER);
-Loom_Hypnos hypnos(manager, HYPNOS_VERSION::V3_3, TIME_ZONE::PST);  //3_2 for LB, 3_3 otherwise
+Loom_Hypnos hypnos(manager, HYPNOS_VERSION::V3_3, TIME_ZONE::PST); // 3_2 for LB, 3_3 otherwise
 // Loom Sensors
 Loom_Analog analog(manager);
+#ifdef DENDROMETER_TEROS10
+Loom_Teros10 teros(manager, A0);
+#endif
 Loom_SHT31 sht(manager);
 Loom_Neopixel statusLight(manager, false, false, true, NEO_RGB); // using channel 2 (physical pin A2). use RGB for through-hole devices
 
@@ -78,13 +84,12 @@ void flashColor(uint8_t r, uint8_t g, uint8_t b);
  */
 void setup()
 {
-    pinMode(BUTTON_PIN, INPUT_PULLUP);             // Enable pullup on button pin. this is necessary for the interrupt (and the button check on the next line)
+    pinMode(BUTTON_PIN, INPUT_PULLUP); // Enable pullup on button pin. this is necessary for the interrupt (and the button check on the next line)
     delay(10);
     bool userInput = !digitalRead(BUTTON_PIN); // wait for serial connection ONLY button is pressed (low reading)
-    manager.beginSerial(userInput); // wait for serial connection ONLY button is pressed 
+    manager.beginSerial(userInput);            // wait for serial connection ONLY button is pressed
 
-    //hypnos.setLogName("dendrometerData");
-
+    // hypnos.setLogName("dendrometerData");
 
     hypnos.enable();
 #if defined DENDROMETER_WIFI
@@ -118,7 +123,7 @@ void loop()
         buttonPressed = false;
     }
     transmit();
-    sleepCycle(); // bug: device will display status for two sleep cycles instead of one when the button is pressed
+    sleepCycle();
 }
 
 /**
@@ -137,8 +142,8 @@ void measure()
 
     hypnos.logToSD();
 
-    //delay(5000);
-    //manager.display_data();
+    // delay(5000);
+    // manager.display_data();
 }
 
 /**
@@ -175,13 +180,14 @@ void transmit()
         loopCounter = 0;
     }
 #elif defined DENDROMETER_WIFI
-    if(!batchSD.shouldPublish()) {
+    if (!batchSD.shouldPublish())
+    {
         char output[100];
         snprintf_P(output, OUTPUT_SIZE, PSTR("<Dendrometer> Not ready to publish. Currently at packet %i of %i"),
-            batchSD.getCurrentBatch(), batchSD.getBatchSize());
+                   batchSD.getCurrentBatch(), batchSD.getBatchSize());
         Serial.println(output);
     }
-    if(wifi.isConnected())
+    if (wifi.isConnected())
         mqtt.publish(batchSD);
 #endif
 }
@@ -221,7 +227,7 @@ void ISR_BUTTON()
 void alignMagnetSensor()
 {
     magnetStatus status;
-    
+
     Serial.println(F("<Dendrometer> Waiting for magnet alignment"));
     while (1)
     {
@@ -309,25 +315,27 @@ void checkMagnetSensor()
     if (__builtin_parity(data) == 0 && data != 0) //__builtin_parity() returns 0 if value has even parity
         return;
     for (auto _ = 6; _--;)
-        flashColor(255, 100, 0);
+        flashColor(255, 100, 0); // if the check didn't pass, alert the user by flashing the LED
 }
-
 
 /**
  * Ask the user to set a custom time
  */
-void setRTC(bool wait) 
+void setRTC(bool wait)
 {
-    if(!wait || !Serial)
+    if (!wait || !Serial)
         return;
-    
+
     Serial.println(F("<Dendrometer> Adjust RTC time? (y/n)"));
-    while(!Serial.available());
+    while (!Serial.available())
+        ;
     int val = Serial.read();
     delay(50);
-    while (Serial.available()) Serial.read(); // flush the input buffer to avoid invalid input to rtc function
+    while (Serial.available())
+        Serial.read(); // flush the input buffer to avoid invalid input to rtc function
 
-    if(val == 'y') {
+    if (val == 'y')
+    {
         hypnos.set_custom_time();
     }
 }

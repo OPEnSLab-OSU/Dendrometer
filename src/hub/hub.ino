@@ -1,8 +1,3 @@
-/**
- * This is an lab example for an LTE Dendrometer hub
- *
- * MANAGER MUST BE INCLUDED FIRST IN ALL CODE
- */
 #include "arduino_secrets.h"
 
 #include <Loom_Manager.h>
