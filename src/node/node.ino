@@ -14,7 +14,7 @@
 /* DEVICE CONFIGURATION */
 //////////////////////////
 static const uint8_t NODE_NUMBER = 1;
-static const char * DEVICE_NAME = "DendrometerV4_";
+static const char * DEVICE_NAME = "BlueberryDendrometer_";
 ////Select one wireless communication option
 #define DENDROMETER_LORA
 // #define DENDROMETER_WIFI
@@ -89,7 +89,7 @@ void setup()
     bool userInput = !digitalRead(BUTTON_PIN); // wait for serial connection ONLY button is pressed (low reading)
     manager.beginSerial(userInput);            // wait for serial connection ONLY button is pressed
 
-    // hypnos.setLogName("dendrometerData");
+    hypnos.setLogName("data");
 
     hypnos.enable();
 #if defined DENDROMETER_WIFI
