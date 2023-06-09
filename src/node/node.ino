@@ -42,7 +42,7 @@ Loom_Analog analog(manager);
 Loom_Teros10 teros(manager, A0);
 #endif
 Loom_SHT31 sht(manager);
-Loom_Neopixel statusLight(manager, false, false, true, NEO_RGB); // using channel 2 (physical pin A2). use RGB for through-hole devices
+Loom_Neopixel statusLight(manager, false, false, true, NEO_GRB); // using channel 2 (physical pin A2). use RGB for through-hole devices
 
 // magnet sensor
 AS5311 magnetSensor(AS5311_CS, AS5311_CLK, AS5311_DO);
