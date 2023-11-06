@@ -1,6 +1,6 @@
 #include "arduino_secrets.h"
 
-#include <Loom_Manager.h>
+#include <Loom_Manager.h> //4.5
 
 #include <Hardware/Loom_Hypnos/Loom_Hypnos.h>
 #include <Radio/Loom_LoRa/Loom_LoRa.h>
