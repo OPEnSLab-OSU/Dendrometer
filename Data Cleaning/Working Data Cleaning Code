@@ -1,0 +1,198 @@
+#Code by Dragomira Zheleva, BEE PhD student
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+import datetime
+from pandas.tseries.offsets import DateOffset
+import matplotlib.dates as mdates
+
+
+def load_and_prepare_data(file_name):  # need to include a line to remove the first day after installation
+    try:
+        # if you want to skip rows use "file_name, skiprows=(number of rows you want to skip)" anywhere
+        # pd.read_csv exists
+        df = pd.read_csv(file_name)
+
+        color_dict = {'Green': 0, 'Yellow': 1, 'Red': 2, 'Error': 3}
+        df['alignment_mapped'] = df['Alignment'].map(color_dict)  # line causing the error
+        df['time_local'] = pd.to_datetime(df['time_local'])
+        device_name = f"{df['name'].iloc[0]}_{df['instance'].iloc[0]}"
+        return df, device_name
+    except KeyError as e:
+        print(f"KeyError: {e}. Could not find the column in the DataFrame.")
+        return None, None  # Return `None` to signify that the DataFrame couldn't be prepared
+
+
+def load_and_prepare_data_time_limit(file_name):
+    try:
+        df = pd.read_csv(file_name)
+        color_dict = {'Green': 0, 'Yellow': 1, 'Red': 2, 'Error': 3}
+        df['alignment_mapped'] = df['Alignment'].map(color_dict)
+        df['time_local'] = pd.to_datetime(df['time_local'])
+
+        # Filter data based on the date range
+        start_date = pd.Timestamp('2023-05-27')  # Adjust the year if needed
+        end_date = pd.Timestamp('2023-10-07')  # Adjust the year if needed
+        df = df[(df['time_local'] >= start_date) & (df['time_local'] <= end_date)]
+
+        device_name = f"{df['name'].iloc[0]}_{df['instance'].iloc[0]}"
+        return df, device_name
+    except KeyError as e:
+        print(f"KeyError: {e}. Could not find the column in the DataFrame.")
+        return None, None  # Return `None` to signify that the DataFrame couldn't be prepared
+
+
+def identify_and_adjust_outliers(df):
+    # Calculate the differences and identify the outliers
+    df['Difference'] = df['um'].diff()
+    Q1 = df['Difference'].quantile(0.25)
+    Q3 = df['Difference'].quantile(0.75)
+    IQR = Q3 - Q1
+    outlier_indices = df[(df['Difference'] < Q1 - 10.0 * IQR) | (df['Difference'] > Q3 + 10.0 * IQR)].index
+
+    # new column for the adjustment values
+    df['Adjustment'] = 0.0
+
+    # Iterate over the outlier indices
+    for idx in outlier_indices:
+        if idx != 0:  # we can't do this for the first index
+            # The adjustment is the difference at the current index
+            adjustment = df.loc[idx, 'Difference']
+
+            # Subtract the adjustment from the current and all following displacement values
+            df.loc[idx:, 'Adjustment'] += adjustment
+
+    # The cleaned displacement values are the original displacement minus the adjustment
+    df['Cleaned Displacement'] = df['um'] - df['Adjustment']
+
+    return df
+
+def save_cleaned_data_to_csv(df, device_name):
+    directory_path = r"C:\Users\jorda\OneDrive - Oregon State University\Documents\Dendrometer\SOREC Data 23'"
+    file_name = f"{device_name}_cleaned_data.csv"
+    full_path = f"{directory_path}\\{file_name}"
+    df.to_csv(full_path, index=False)
+    print(f"Data saved to {full_path}")
+
+
+
+def plot_cleaned_displacement(df, device_name):
+    instance_name = df['instance'].iloc[0]
+    fig, ax = plt.subplots(1, 2, figsize=(14, 6))
+
+    ax[0].plot(df['time_local'], df['um'])
+    ax[0].set_title(f'{device_name}: {instance_name}.Original Displacement')
+    ax[0].set_xlabel('Time')
+    ax[0].set_ylabel('Displacement')
+
+    ax[1].plot(df['time_local'], df['Cleaned Displacement'])
+    ax[1].set_title(f'{device_name}: {instance_name}. Cleaned Displacement')
+    ax[1].set_xlabel('Time')
+    ax[1].set_ylabel('Displacement')
+
+    for axis in ax:
+        labels = axis.get_xticklabels()
+        plt.setp(labels, rotation=45, ha='right')  # Rotate labels by 45 degrees
+
+    plt.tight_layout()
+    plt.show()
+
+
+# this next function does a better job at visualizing the data
+
+def plot_displacement(df, device_name):
+    min_date = df['time_local'].min().strftime('%Y-%m-%d')
+    max_date = df['time_local'].max().strftime('%Y-%m-%d')
+    instance_name = df['instance'].iloc[0]
+
+    fig, ax = plt.subplots(figsize=(12, 10))
+    # plot displacement
+    ax.plot(df['time_local'], df['um'], label='Displacement')
+
+    # plot alignment
+    ax.fill_between(df['time_local'], df['um'].max(), df['um'].min(), where=(df['alignment_mapped'] == 0),
+                    color='green', alpha=0.5, label='Green Alignment')
+    ax.fill_between(df['time_local'], df['um'].max(), df['um'].min(), where=(df['alignment_mapped'] == 1),
+                    color='yellow', alpha=1, label='Yellow Alignment')
+    ax.fill_between(df['time_local'], df['um'].max(), df['um'].min(), where=(df['alignment_mapped'] == 2),
+                    color='red', alpha=1, label='Red Alignment')
+    ax.fill_between(df['time_local'], df['um'].max(), df['um'].min(), where=(df['alignment_mapped'] == 3),
+                    color='purple', alpha=1, label='Error Alignment')
+    # format x-axis as dates
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+    ax.xaxis.set_major_locator(mdates.DayLocator(interval=5))  # tick every week
+    plt.gcf().autofmt_xdate()  # rotate the x labels
+    ax.set_title(f'{device_name}: {instance_name} from {min_date} to {max_date}')
+    ax.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_original_vs_cleaned(df):
+    plt.figure(figsize=(15, 6))
+
+    # Plot the original data
+    plt.plot(df['time_local'], df['um'], label='Original Data', color='blue', alpha=0.7)
+
+    # Plot the cleaned data
+    plt.plot(df['time_local'], df['Cleaned Displacement'], label='Cleaned Data', color='red', linestyle='--')
+
+    # Add labels, title, legend, etc.
+    plt.xlabel('Time')
+    plt.ylabel('Displacement')
+    plt.title('Original vs. Cleaned Data')
+    plt.legend()
+    plt.grid(True)
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_displacement_and_VPD(df, device_name):
+    # Create the primary figure and axis for cleaned displacement
+    fig, ax1 = plt.subplots(figsize=(14, 6))
+
+    # Plot the cleaned displacement on the primary y-axis
+    ax1.plot(df['time_local'], df['Cleaned Displacement'], color='blue', label='Cleaned Displacement')
+    ax1.set_xlabel('Time')
+    ax1.set_ylabel('Cleaned Displacement', color='blue')
+    ax1.tick_params(axis='y', labelcolor='blue')
+    ax1.set_title(f'{device_name}: Cleaned Displacement and VPD')
+
+    # Create the secondary y-axis for VPD
+    ax2 = ax1.twinx()
+    ax2.plot(df['time_local'], df['VPD'], color='orange', label='VPD',
+             linestyle='--')  # Changed color to 'orange' for VPD
+    ax2.set_ylabel('VPD', color='orange')
+    ax2.tick_params(axis='y', labelcolor='orange')
+
+    # Rotate x-axis labels for better visibility
+    labels = ax1.get_xticklabels()
+    plt.setp(labels, rotation=45, ha='right')
+
+    # Adjust layout and show plot
+    plt.tight_layout()
+    plt.show()
+
+
+df, device_name = load_and_prepare_data('LB_3.csv')
+
+if df is not None and device_name is not None:
+
+    save_cleaned_data_to_csv(df, device_name)
+else:
+    print("Data loading failed.")
+
+plot_displacement(df, device_name)
+
+df, device_name = load_and_prepare_data_time_limit('LB_3.csv')
+
+identify_and_adjust_outliers(df)
+
+plot_cleaned_displacement(df, device_name)
+
+plot_original_vs_cleaned(df)
+
+plot_displacement_and_VPD(df, device_name)
