@@ -1,0 +1,19 @@
+import pandas as pd
+
+# Specify the directory path
+directory_path = ''
+
+# Load the CSV files
+dfs = [pd.read_csv(directory_path + '(insert name of device here){}.csv'.format(i), skiprows=3 if i != 0 else 0)
+       for i in range()] # if you want to skip rows use "skiprows=3 if i != 0 else 0)" after .format(i)
+
+# Identify and drop empty or all-NA columns for each DataFrame
+for i, df in enumerate(dfs):
+    empty_or_na_columns = df.columns[df.isna().all()]
+    dfs[i] = df.drop(columns=empty_or_na_columns)
+
+# Concatenate the DataFrames
+combined_df = pd.concat(dfs, ignore_index=True)
+
+# Save the combined DataFrame to a new CSV file in the same directory
+combined_df.to_csv(directory_path + '(insert new csv name here)', index=False)
