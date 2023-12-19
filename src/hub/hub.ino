@@ -55,7 +55,14 @@ void loop()
         manager.package();
         manager.display_data();
         mqtt.publish();
-
+        //restart LTE if connection to internet fails
+        if (!lte.verifyConnection())
+        {
+            lte.power_down();
+            delay(5000);
+            lte.power_up();
+        }
+        
         timer = millis();
     }
 }
