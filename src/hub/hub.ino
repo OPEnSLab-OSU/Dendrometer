@@ -25,14 +25,17 @@ void setup()
 
     // Enable the power rails on the hypnos
     hypnos.enable();
-
+    hypnos.setNetworkInterface(&lte);
     setRTC();
+
 
     // load MQTT credentials from the SD card, if they exist
     mqtt.loadConfigFromJSON(hypnos.readFile("mqtt_creds.json"));
 
     // Initialize the modules
     manager.initialize();
+    //sync time
+    hypnos.networkTimeUpdate();
 }
 
 void loop()

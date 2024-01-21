@@ -92,14 +92,16 @@ void setup()
     hypnos.setLogName("data"); //SD card CSV file name
 
     hypnos.enable();
+    manager.initialize();
 #if defined DENDROMETER_WIFI
     wifi.setBatchSD(batchSD);
     wifi.setMaxRetries(2);
     mqtt.setMaxRetries(1);
     wifi.loadConfigFromJSON(hypnos.readFile("wifi_creds.json"));
     mqtt.loadConfigFromJSON(hypnos.readFile("mqtt_creds.json"));
+    hypnos.setNetworkInterface(&wifi);
+    hypnos.networkTimeUpdate();
 #endif
-    manager.initialize();
 
     setRTC(userInput);
 
@@ -118,6 +120,9 @@ void loop()
     if (buttonPressed) // if interrupt button was pressed, display staus of magnet sensor
     {
         displayMagnetStatus(magnetSensor.getMagnetStatus());
+    #if defined DENDROMETER_WIFI
+        hypnos.networkTimeUpdate();
+    #endif
         delay(3000);
         statusLight.set_color(2, 0, 0, 0, 0); // LED Off
         buttonPressed = false;
