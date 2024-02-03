@@ -11,13 +11,13 @@
 const unsigned long REPORT_INTERVAL = 1 * 60 * 60 * 1000;
 
 Manager manager("Hub", 0);
-
+int packetNumber = 0;
 Loom_Hypnos hypnos(manager, HYPNOS_VERSION::V3_3, TIME_ZONE::PST);
 Loom_Analog batteryVoltage(manager);
 Loom_LoRa lora(manager);
 Loom_LTE lte(manager, "hologram", "", "", A5);
 Loom_MongoDB mqtt(manager, lte.getClient(), SECRET_BROKER, SECRET_PORT, DATABASE, BROKER_USER, BROKER_PASS);
-Loom_BatchSD batchSD(hypnos, 17); //set batch size uploading
+Loom_BatchSD batchSD(hypnos, 16); //set batch size uploading
 
 void setup()
 {
@@ -26,7 +26,7 @@ void setup()
 
     // Enable the power rails on the hypnos
     hypnos.enable();
-    hypnos.setNetworkInterface(&lte);
+
     setRTC();
 
     // Sets the LTE board to use batch SD to only start when we actually need to publish data
@@ -38,20 +38,19 @@ void setup()
 
     // Initialize the modules
     manager.initialize();
-    //sync time
-    hypnos.networkTimeUpdate();
 }
 
 void loop()
 {
     // Wait 5 seconds for a message
-    if (lora.receiveBatch(5000, 0))
-    {
-        manager.display_data();
-        hypnos.logToSD();
-        mqtt.publish(batchSD);
-    }
-    static unsigned long timer = millis();
+    do{
+      if (lora.receiveBatch(5000, &packetNumber))
+      {
+          manager.display_data();
+          hypnos.logToSD();
+          mqtt.publish(batchSD);
+      }
+      static unsigned long timer = millis();
     if (millis() - timer > REPORT_INTERVAL)
     {
         manager.set_device_name("Hub");
@@ -71,6 +70,7 @@ void loop()
         
         timer = millis();
     }
+    }while(packetNumber > 0);
 }
 
 void setRTC()
