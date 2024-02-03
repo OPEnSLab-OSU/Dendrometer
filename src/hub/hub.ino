@@ -25,7 +25,7 @@ void setup()
 
     // Enable the power rails on the hypnos
     hypnos.enable();
-    hypnos.setNetworkInterface(&lte);
+
     setRTC();
 
 
@@ -34,8 +34,7 @@ void setup()
 
     // Initialize the modules
     manager.initialize();
-    //sync time
-    hypnos.networkTimeUpdate();
+
 }
 
 void loop()
