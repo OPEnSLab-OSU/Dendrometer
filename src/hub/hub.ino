@@ -11,7 +11,6 @@
 const unsigned long REPORT_INTERVAL = 1 * 60 * 60 * 1000;
 
 Manager manager("Hub", 0);
-int packetNumber = 0;
 Loom_Hypnos hypnos(manager, HYPNOS_VERSION::V3_3, TIME_ZONE::PST);
 Loom_Analog batteryVoltage(manager);
 Loom_LoRa lora(manager);
@@ -19,6 +18,7 @@ Loom_LTE lte(manager, "hologram", "", "", A5);
 Loom_MongoDB mqtt(manager, lte.getClient(), SECRET_BROKER, SECRET_PORT, DATABASE, BROKER_USER, BROKER_PASS);
 Loom_BatchSD batchSD(hypnos, 16); //set batch size uploading
 
+int packetNumber = 0;
 void setup()
 {
     // Start the serial interface

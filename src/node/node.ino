@@ -92,8 +92,6 @@ void setup()
 
     hypnos.setLogName("data"); //SD card CSV file name
 
-    hypnos.enable();
-    manager.initialize();
 #if defined DENDROMETER_WIFI
     wifi.setBatchSD(batchSD);
     wifi.setMaxRetries(2);
@@ -105,7 +103,8 @@ void setup()
 #elif defined DENDROMETER_LORA
     lora.setBatchSD(batchSD);
 #endif
-
+    hypnos.enable();
+    manager.initialize();
     setRTC(userInput);
 
     checkMagnetSensor();
