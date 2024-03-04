@@ -21,7 +21,7 @@ static const char * DEVICE_NAME = "BlueberryDendrometer_";
 ////These two time values are added together to determine the measurement interval
 static const int8_t MEASUREMENT_INTERVAL_MINUTES = 15;
 static const int8_t MEASUREMENT_INTERVAL_SECONDS = 0;
-static const uint8_t TRANSMIT_INTERVAL = 16; // to save power, only transmit a packet every X measurements
+static const uint8_t TRANSMIT_INTERVAL = 16; // to save power, only transmit every X measurements
 ////Use teros 10?
 #define DENDROMETER_TEROS10
 //////////////////////////
@@ -52,6 +52,7 @@ AS5311 magnetSensor(AS5311_CS, AS5311_CLK, AS5311_DO);
 #error Choose ONE wireless communication protocol.
 #elif defined DENDROMETER_LORA
 Loom_LoRa lora(manager, NODE_NUMBER);
+Loom_BatchSD batchSD(hypnos, TRANSMIT_INTERVAL);
 #elif defined DENDROMETER_WIFI
 #include "credentials/arduino_secrets.h"
 Loom_WIFI wifi(manager, CommunicationMode::CLIENT, SECRET_SSID, SECRET_PASS);
@@ -90,19 +91,18 @@ void setup()
     manager.beginSerial(userInput);            // wait for serial connection ONLY button is pressed
 
     hypnos.setLogName("data"); //SD card CSV file name
-
-    hypnos.enable();
-    manager.initialize();
+    
 #if defined DENDROMETER_WIFI
     wifi.setBatchSD(batchSD);
     wifi.setMaxRetries(2);
-    mqtt.setMaxRetries(1);
+    mqtt.setMaxRetries(2);
     wifi.loadConfigFromJSON(hypnos.readFile("wifi_creds.json"));
     mqtt.loadConfigFromJSON(hypnos.readFile("mqtt_creds.json"));
     hypnos.setNetworkInterface(&wifi);
-    hypnos.networkTimeUpdate();
+#elif defined DENDROMETER_LORA
+    lora.setBatchSD(batchSD);
 #endif
-
+    manager.initialize();
     setRTC(userInput);
 
     checkMagnetSensor();
@@ -120,9 +120,6 @@ void loop()
     if (buttonPressed) // if interrupt button was pressed, display staus of magnet sensor
     {
         displayMagnetStatus(magnetSensor.getMagnetStatus());
-    #if defined DENDROMETER_WIFI
-        hypnos.networkTimeUpdate();
-    #endif
         delay(3000);
         statusLight.set_color(2, 0, 0, 0, 0); // LED Off
         buttonPressed = false;
@@ -170,20 +167,12 @@ void measureVPD()
 }
 
 /**
- * transmit the current data packet over LoRa
- * loop counter starts high so an initial transmission can be triggered by pressing the button
- * (the first transmission will happen the second time this function is called)
+ * transmit the batch data packet over LoRa
  */
 void transmit()
 {
 #if defined DENDROMETER_LORA
-    static uint8_t loopCounter = TRANSMIT_INTERVAL - 2;
-    loopCounter++;
-    if (loopCounter >= TRANSMIT_INTERVAL)
-    {
-        lora.send(0);
-        loopCounter = 0;
-    }
+    lora.sendBatch(0);
 #elif defined DENDROMETER_WIFI
     if (!batchSD.shouldPublish())
     {
@@ -193,6 +182,7 @@ void transmit()
         Serial.println(output);
     }
     if (wifi.isConnected())
+        hypnos.networkTimeUpdate();
         mqtt.publish(batchSD);
 #endif
 }
