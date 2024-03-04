@@ -91,19 +91,17 @@ void setup()
     manager.beginSerial(userInput);            // wait for serial connection ONLY button is pressed
 
     hypnos.setLogName("data"); //SD card CSV file name
-
+    
 #if defined DENDROMETER_WIFI
     wifi.setBatchSD(batchSD);
     wifi.setMaxRetries(2);
-    mqtt.setMaxRetries(1);
+    mqtt.setMaxRetries(2);
     wifi.loadConfigFromJSON(hypnos.readFile("wifi_creds.json"));
     mqtt.loadConfigFromJSON(hypnos.readFile("mqtt_creds.json"));
     hypnos.setNetworkInterface(&wifi);
-    hypnos.networkTimeUpdate();
 #elif defined DENDROMETER_LORA
     lora.setBatchSD(batchSD);
 #endif
-    hypnos.enable();
     manager.initialize();
     setRTC(userInput);
 
@@ -122,9 +120,6 @@ void loop()
     if (buttonPressed) // if interrupt button was pressed, display staus of magnet sensor
     {
         displayMagnetStatus(magnetSensor.getMagnetStatus());
-    #if defined DENDROMETER_WIFI
-        hypnos.networkTimeUpdate();
-    #endif
         delay(3000);
         statusLight.set_color(2, 0, 0, 0, 0); // LED Off
         buttonPressed = false;
@@ -187,6 +182,7 @@ void transmit()
         Serial.println(output);
     }
     if (wifi.isConnected())
+        hypnos.networkTimeUpdate();
         mqtt.publish(batchSD);
 #endif
 }
