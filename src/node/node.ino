@@ -91,7 +91,8 @@ void setup()
     manager.beginSerial(userInput);            // wait for serial connection ONLY button is pressed
 
     hypnos.setLogName("data"); //SD card CSV file name
-    
+    hypnos.enable();
+
 #if defined DENDROMETER_WIFI
     wifi.setBatchSD(batchSD);
     wifi.setMaxRetries(2);
