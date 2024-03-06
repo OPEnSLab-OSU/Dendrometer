@@ -1,5 +1,5 @@
 //change to match desired wifi network
-#define SECRET_SSID "OSU_Unsecured"
+#define SECRET_SSID "OSU_Access"
 #define SECRET_PASS ""
 
 //set the database name
