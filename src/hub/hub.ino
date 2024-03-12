@@ -50,28 +50,22 @@ void loop()
           hypnos.logToSD();
           mqtt.publish(batchSD);
       }
-      static unsigned long timer = millis();
-    if (millis() - timer > REPORT_INTERVAL)
-    {
-        manager.set_device_name("Hub");
-        manager.set_instance_num(0);
-
-        manager.measure();
-        manager.package();
-        manager.display_data();
-        mqtt.publish();
-        //restart LTE if connection to internet fails
-        if (!lte.verifyConnection())
-        {
-            lte.power_down();
-            delay(5000);
-            lte.power_up();
-        }
-        
-        timer = millis();
-    }
     }while(packetNumber > 0);
+    unsigned long timer = millis();
+  if (millis() - timer > REPORT_INTERVAL)
+      {
+          manager.set_device_name("Hub");
+          manager.set_instance_num(0);
+
+          manager.measure();
+          manager.package();
+          manager.display_data();
+          mqtt.publish();
+          
+          timer = millis();
+      }
 }
+
 
 void setRTC()
 {

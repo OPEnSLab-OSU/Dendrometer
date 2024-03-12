@@ -17,7 +17,7 @@ static const uint8_t NODE_NUMBER = 1;
 static const char * DEVICE_NAME = "BlueberryDendrometer_";
 ////Select one wireless communication option
 #define DENDROMETER_LORA
-// #define DENDROMETER_WIFI
+//#define DENDROMETER_WIFI
 ////These two time values are added together to determine the measurement interval
 static const int8_t MEASUREMENT_INTERVAL_MINUTES = 15;
 static const int8_t MEASUREMENT_INTERVAL_SECONDS = 0;
