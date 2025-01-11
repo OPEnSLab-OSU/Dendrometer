@@ -14,7 +14,7 @@
 /* DEVICE CONFIGURATION */
 //////////////////////////
 static const uint8_t NODE_NUMBER = 1;
-static const char * DEVICE_NAME = "BlueberryDendrometer_";
+static const char * DEVICE_NAME = "HazelnutDendrometer_";
 ////Select one wireless communication option
 #define DENDROMETER_LORA
 //#define DENDROMETER_WIFI
@@ -56,7 +56,7 @@ Loom_BatchSD batchSD(hypnos, TRANSMIT_INTERVAL);
 #elif defined DENDROMETER_WIFI
 #include "credentials/arduino_secrets.h"
 Loom_WIFI wifi(manager, CommunicationMode::CLIENT, SECRET_SSID, SECRET_PASS);
-Loom_MongoDB mqtt(manager, wifi.getClient(), SECRET_BROKER, SECRET_PORT, MQTT_DATABASE, BROKER_USER, BROKER_PASS);
+Loom_MongoDB mqtt(manager, wifi, SECRET_BROKER, SECRET_PORT, MQTT_DATABASE, BROKER_USER, BROKER_PASS);
 Loom_BatchSD batchSD(hypnos, TRANSMIT_INTERVAL);
 #else
 #warning Wireless communication disabled!
@@ -85,12 +85,13 @@ void flashColor(uint8_t r, uint8_t g, uint8_t b);
  */
 void setup()
 {
+
     pinMode(BUTTON_PIN, INPUT_PULLUP); // Enable pullup on button pin. this is necessary for the interrupt (and the button check on the next line)
     delay(10);
     bool userInput = !digitalRead(BUTTON_PIN); // wait for serial connection ONLY button is pressed (low reading)
     manager.beginSerial(userInput);            // wait for serial connection ONLY button is pressed
 
-    hypnos.setLogName("data"); //SD card CSV file name
+    hypnos.setLogName("HazelnutDendrometer_1data"); //SD card CSV file name
     hypnos.enable();
 
 #if defined DENDROMETER_WIFI

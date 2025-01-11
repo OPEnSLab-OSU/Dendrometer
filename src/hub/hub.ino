@@ -1,6 +1,6 @@
 #include "arduino_secrets.h"
 
-#include <Loom_Manager.h> //4.6
+#include <Loom_Manager.h> //4.7
 
 #include <Hardware/Loom_Hypnos/Loom_Hypnos.h>
 #include <Radio/Loom_LoRa/Loom_LoRa.h>
@@ -15,7 +15,7 @@ Loom_Hypnos hypnos(manager, HYPNOS_VERSION::V3_3, TIME_ZONE::PST);
 Loom_Analog batteryVoltage(manager);
 Loom_LoRa lora(manager);
 Loom_LTE lte(manager, "hologram", "", "", A5);
-Loom_MongoDB mqtt(manager, lte.getClient(), SECRET_BROKER, SECRET_PORT, DATABASE, BROKER_USER, BROKER_PASS);
+Loom_MongoDB mqtt(manager, lte, SECRET_BROKER, SECRET_PORT, DATABASE, BROKER_USER, BROKER_PASS);
 Loom_BatchSD batchSD(hypnos, 16); //set batch size uploading
 
 int packetNumber = 0;
