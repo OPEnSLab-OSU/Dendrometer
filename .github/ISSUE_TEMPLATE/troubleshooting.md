@@ -1,3 +1,11 @@
+---
+name: Troubleshooting
+about: Create a report describing an issue and the steps needed to fix it
+title: ''
+labels: ''
+assignees: ''
+
+---
 Date issue was identified: 	
 
 Who identified issue: 		
