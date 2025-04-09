@@ -1,7 +1,11 @@
 Date issue was identified: 	
+
 Who identified issue: 		
+
 Description of sensor model with issue:
+
 Client with issue: 
+
 Device Name:
 
 **Description of error or issue that occurred:**
