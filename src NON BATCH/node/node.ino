@@ -13,16 +13,15 @@
 //////////////////////////
 /* DEVICE CONFIGURATION */
 //////////////////////////
-static const uint8_t NODE_NUMBER = 1;
-static const char * DEVICE_NAME = "HazelnutDendrometer_";
+static const uint8_t NODE_NUMBER = 11;
+static const char * DEVICE_NAME = "Dendrometer_";
 ////Select one wireless communication option
-//#define DENDROMETER_LORA
-#define DENDROMETER_WIFI
+#define DENDROMETER_LORA
+//#define DENDROMETER_WIFI
 ////These two time values are added together to determine the measurement interval
-//static const int8_t MEASUREMENT_INTERVAL_MINUTES = 15;
-//static const int8_t MEASUREMENT_INTERVAL_SECONDS = 0;
-TimeSpan sleepInterval;
-static const uint8_t TRANSMIT_INTERVAL = 16; // to save power, only transmit every X measurements
+static const int8_t MEASUREMENT_INTERVAL_MINUTES = 15;
+static const int8_t MEASUREMENT_INTERVAL_SECONDS = 0;
+static const uint8_t TRANSMIT_INTERVAL = 96; // to save power, only transmit every X measurements
 ////Use teros 10?
 //#define DENDROMETER_TEROS10
 //////////////////////////
@@ -43,7 +42,7 @@ Loom_Analog analog(manager);
 Loom_Teros10 teros(manager, A0);
 #endif
 Loom_SHT31 sht(manager);
-Loom_Neopixel statusLight(manager, false, false, true, NEO_GRB); // using channel 2 (physical pin A2). use RGB for through-hole LED devices. GRB otherwise.
+Loom_Neopixel statusLight(manager, false, false, true, NEO_RGB); // using channel 2 (physical pin A2). use RGB for through-hole LED devices. GRB otherwise.
 
 // magnet sensor
 AS5311 magnetSensor(AS5311_CS, AS5311_CLK, AS5311_DO);
@@ -53,7 +52,6 @@ AS5311 magnetSensor(AS5311_CS, AS5311_CLK, AS5311_DO);
 #error Choose ONE wireless communication protocol.
 #elif defined DENDROMETER_LORA
 Loom_LoRa lora(manager, NODE_NUMBER);
-Loom_BatchSD batchSD(hypnos, TRANSMIT_INTERVAL);
 #elif defined DENDROMETER_WIFI
 #include "credentials/arduino_secrets.h"
 Loom_WIFI wifi(manager, CommunicationMode::CLIENT, SECRET_SSID, SECRET_PASS);
@@ -92,9 +90,8 @@ void setup()
     bool userInput = !digitalRead(BUTTON_PIN); // wait for serial connection ONLY button is pressed (low reading)
     manager.beginSerial(userInput);            // wait for serial connection ONLY button is pressed
 
-    hypnos.setLogName("HazelnutDendrometer_1data"); //SD card CSV file name
+    hypnos.setLogName("data"); //SD card CSV file name
     hypnos.enable();
-    sleepInterval = hypnos.getConfigFromSD("HypnosConfig.json");
 
 #if defined DENDROMETER_WIFI
     wifi.setBatchSD(batchSD);
@@ -103,8 +100,6 @@ void setup()
     wifi.loadConfigFromJSON(hypnos.readFile("wifi_creds.json"));
     mqtt.loadConfigFromJSON(hypnos.readFile("mqtt_creds.json"));
     hypnos.setNetworkInterface(&wifi);
-#elif defined DENDROMETER_LORA
-    lora.setBatchSD(batchSD);
 #endif
     manager.initialize();
     setRTC(userInput);
@@ -176,7 +171,13 @@ void measureVPD()
 void transmit()
 {
 #if defined DENDROMETER_LORA
-    lora.sendBatch(0);
+    static uint8_t loopCounter = TRANSMIT_INTERVAL - 2;
+    loopCounter++;
+    if (loopCounter >= TRANSMIT_INTERVAL)
+    {
+        lora.send(0);
+        loopCounter = 0;
+    }
 #elif defined DENDROMETER_WIFI
     if (!batchSD.shouldPublish())
     {
@@ -196,7 +197,7 @@ void transmit()
  */
 void sleepCycle()
 {
-    hypnos.setInterruptDuration(sleepInterval);
+    hypnos.setInterruptDuration(TimeSpan(0, 0, MEASUREMENT_INTERVAL_MINUTES, MEASUREMENT_INTERVAL_SECONDS));
     // Reattach to the interrupt after we have set the alarm so we can have repeat triggers
     hypnos.reattachRTCInterrupt();
     attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), ISR_BUTTON, FALLING);

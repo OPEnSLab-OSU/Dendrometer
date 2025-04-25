@@ -16,11 +16,17 @@ Loom_Analog batteryVoltage(manager);
 Loom_LoRa lora(manager);
 Loom_LTE lte(manager, "hologram", "", "", A5);
 Loom_MongoDB mqtt(manager, lte, SECRET_BROKER, SECRET_PORT, DATABASE, BROKER_USER, BROKER_PASS);
-Loom_BatchSD batchSD(hypnos, 16); //set batch size uploading
+
 
 int packetNumber = 0;
 void setup()
 {
+
+  /* Enables logging logs to the SD card for later viewing under the 'debug' folder */
+  ENABLE_SD_LOGGING;   
+  
+  /* Enables generation of function summaries */
+  ENABLE_FUNC_SUMMARIES;
     // Start the serial interface
     manager.beginSerial();
 
@@ -30,7 +36,7 @@ void setup()
     setRTC();
 
     // Sets the LTE board to use batch SD to only start when we actually need to publish data
-    lte.setBatchSD(batchSD);
+
 
 
     // load MQTT credentials from the SD card, if they exist
@@ -43,14 +49,12 @@ void setup()
 void loop()
 {
     // Wait 5 seconds for a message
-    do{
-      if (lora.receiveBatch(5000, &packetNumber))
-      {
-          manager.display_data();
-          hypnos.logToSD();
-          mqtt.publish(batchSD);
-      }
-    }while(packetNumber > 0);
+    if (lora.receive(5000))
+    {
+        manager.display_data();
+        hypnos.logToSD();
+        mqtt.publish();
+    }
   static unsigned long timer = millis();
   if (millis() - timer > REPORT_INTERVAL)
       {
