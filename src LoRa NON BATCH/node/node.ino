@@ -5,7 +5,7 @@
 #include <Sensors/Analog/Loom_Teros10/Loom_Teros10.h>
 #include <Sensors/I2C/Loom_SHT31/Loom_SHT31.h>
 #include <Radio/Loom_LoRa/Loom_LoRa.h>
-#include <Internet/Connectivity/Loom_Wifi/Loom_Wifi.h>
+
 #include <Internet/Logging/Loom_MongoDB/Loom_MongoDB.h>
 
 #include "AS5311.h"
@@ -17,10 +17,7 @@ static const uint8_t NODE_NUMBER = 11;
 static const char * DEVICE_NAME = "Dendrometer_";
 ////Select one wireless communication option
 #define DENDROMETER_LORA
-//#define DENDROMETER_WIFI
-////These two time values are added together to determine the measurement interval
-static const int8_t MEASUREMENT_INTERVAL_MINUTES = 15;
-static const int8_t MEASUREMENT_INTERVAL_SECONDS = 0;
+TimeSpan sleepInterval;
 static const uint8_t TRANSMIT_INTERVAL = 96; // to save power, only transmit every X measurements
 ////Use teros 10?
 //#define DENDROMETER_TEROS10
@@ -48,15 +45,9 @@ Loom_Neopixel statusLight(manager, false, false, true, NEO_RGB); // using channe
 AS5311 magnetSensor(AS5311_CS, AS5311_CLK, AS5311_DO);
 
 // wireless
-#if defined DENDROMETER_LORA && defined DENDROMETER_WIFI
-#error Choose ONE wireless communication protocol.
-#elif defined DENDROMETER_LORA
+
+#if defined DENDROMETER_LORA
 Loom_LoRa lora(manager, NODE_NUMBER);
-#elif defined DENDROMETER_WIFI
-#include "credentials/arduino_secrets.h"
-Loom_WIFI wifi(manager, CommunicationMode::CLIENT, SECRET_SSID, SECRET_PASS);
-Loom_MongoDB mqtt(manager, wifi, SECRET_BROKER, SECRET_PORT, MQTT_DATABASE, BROKER_USER, BROKER_PASS);
-Loom_BatchSD batchSD(hypnos, TRANSMIT_INTERVAL);
 #else
 #warning Wireless communication disabled!
 #endif
@@ -92,15 +83,8 @@ void setup()
 
     hypnos.setLogName("data"); //SD card CSV file name
     hypnos.enable();
+    sleepInterval = hypnos.getConfigFromSD("HypnosConfig.json");
 
-#if defined DENDROMETER_WIFI
-    wifi.setBatchSD(batchSD);
-    wifi.setMaxRetries(2);
-    mqtt.setMaxRetries(2);
-    wifi.loadConfigFromJSON(hypnos.readFile("wifi_creds.json"));
-    mqtt.loadConfigFromJSON(hypnos.readFile("mqtt_creds.json"));
-    hypnos.setNetworkInterface(&wifi);
-#endif
     manager.initialize();
     setRTC(userInput);
 
@@ -170,7 +154,6 @@ void measureVPD()
  */
 void transmit()
 {
-#if defined DENDROMETER_LORA
     static uint8_t loopCounter = TRANSMIT_INTERVAL - 2;
     loopCounter++;
     if (loopCounter >= TRANSMIT_INTERVAL)
@@ -178,18 +161,6 @@ void transmit()
         lora.send(0);
         loopCounter = 0;
     }
-#elif defined DENDROMETER_WIFI
-    if (!batchSD.shouldPublish())
-    {
-        char output[100];
-        snprintf_P(output, OUTPUT_SIZE, PSTR("<Dendrometer> Not ready to publish. Currently at packet %i of %i"),
-                   batchSD.getCurrentBatch(), batchSD.getBatchSize());
-        Serial.println(output);
-    }
-    if (wifi.isConnected())
-        hypnos.networkTimeUpdate();
-        mqtt.publish(batchSD);
-#endif
 }
 
 /**
@@ -197,7 +168,7 @@ void transmit()
  */
 void sleepCycle()
 {
-    hypnos.setInterruptDuration(TimeSpan(0, 0, MEASUREMENT_INTERVAL_MINUTES, MEASUREMENT_INTERVAL_SECONDS));
+    hypnos.setInterruptDuration(sleepInterval);
     // Reattach to the interrupt after we have set the alarm so we can have repeat triggers
     hypnos.reattachRTCInterrupt();
     attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), ISR_BUTTON, FALLING);

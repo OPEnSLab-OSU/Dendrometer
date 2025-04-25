@@ -91,7 +91,7 @@ void setup()
     delay(10);
     bool userInput = !digitalRead(BUTTON_PIN); // wait for serial connection ONLY button is pressed (low reading)
     manager.beginSerial(userInput);            // wait for serial connection ONLY button is pressed
-
+    
     hypnos.setLogName("HazelnutDendrometer_1data"); //SD card CSV file name
     hypnos.enable();
     sleepInterval = hypnos.getConfigFromSD("HypnosConfig.json");
