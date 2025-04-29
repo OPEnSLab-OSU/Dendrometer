@@ -6,7 +6,6 @@
 #include <Sensors/I2C/Loom_SHT31/Loom_SHT31.h>
 #include <Radio/Loom_LoRa/Loom_LoRa.h>
 
-#include <Internet/Logging/Loom_MongoDB/Loom_MongoDB.h>
 
 #include "AS5311.h"
 
