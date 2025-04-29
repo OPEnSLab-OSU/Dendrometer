@@ -4,7 +4,7 @@
 #include <Sensors/Loom_Analog/Loom_Analog.h>
 #include <Sensors/Analog/Loom_Teros10/Loom_Teros10.h>
 #include <Sensors/I2C/Loom_SHT31/Loom_SHT31.h>
-#include <Radio/Loom_LoRa/Loom_LoRa.h>
+
 #include <Internet/Connectivity/Loom_Wifi/Loom_Wifi.h>
 #include <Internet/Logging/Loom_MongoDB/Loom_MongoDB.h>
 
@@ -16,11 +16,9 @@
 static const uint8_t NODE_NUMBER = 1;
 static const char * DEVICE_NAME = "HazelnutDendrometer_";
 ////Select one wireless communication option
-//#define DENDROMETER_LORA
+
 #define DENDROMETER_WIFI
-////These two time values are added together to determine the measurement interval
-//static const int8_t MEASUREMENT_INTERVAL_MINUTES = 15;
-//static const int8_t MEASUREMENT_INTERVAL_SECONDS = 0;
+
 TimeSpan sleepInterval;
 static const uint8_t TRANSMIT_INTERVAL = 16; // to save power, only transmit every X measurements
 ////Use teros 10?
@@ -49,13 +47,8 @@ Loom_Neopixel statusLight(manager, false, false, true, NEO_GRB); // using channe
 AS5311 magnetSensor(AS5311_CS, AS5311_CLK, AS5311_DO);
 
 // wireless
-#if defined DENDROMETER_LORA && defined DENDROMETER_WIFI
-#error Choose ONE wireless communication protocol.
-#elif defined DENDROMETER_LORA
-Loom_LoRa lora(manager, NODE_NUMBER);
-Loom_BatchSD batchSD(hypnos, TRANSMIT_INTERVAL);
-#elif defined DENDROMETER_WIFI
-#include "credentials/arduino_secrets.h"
+#if defined DENDROMETER_WIFI
+#include "arduino_secrets.h"
 Loom_WIFI wifi(manager, CommunicationMode::CLIENT, SECRET_SSID, SECRET_PASS);
 Loom_MongoDB mqtt(manager, wifi, SECRET_BROKER, SECRET_PORT, MQTT_DATABASE, BROKER_USER, BROKER_PASS);
 Loom_BatchSD batchSD(hypnos, TRANSMIT_INTERVAL);
@@ -103,8 +96,6 @@ void setup()
     wifi.loadConfigFromJSON(hypnos.readFile("wifi_creds.json"));
     mqtt.loadConfigFromJSON(hypnos.readFile("mqtt_creds.json"));
     hypnos.setNetworkInterface(&wifi);
-#elif defined DENDROMETER_LORA
-    lora.setBatchSD(batchSD);
 #endif
     manager.initialize();
     setRTC(userInput);
@@ -171,13 +162,11 @@ void measureVPD()
 }
 
 /**
- * transmit the batch data packet over LoRa
+ * transmit the batch data packet 
  */
 void transmit()
 {
-#if defined DENDROMETER_LORA
-    lora.sendBatch(0);
-#elif defined DENDROMETER_WIFI
+#if defined DENDROMETER_WIFI
     if (!batchSD.shouldPublish())
     {
         char output[100];
