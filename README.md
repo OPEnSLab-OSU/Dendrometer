@@ -28,4 +28,4 @@ Contains all of the code used on the dendrometer.
   - [Electronics Build Guide](https://docs.google.com/document/d/1BaNuNSJrL86lxKixB8chgZGySgj0bhYSMtVzJu6EDW4/edit?usp=sharing)
   - [Mechanical Build Guide](https://docs.google.com/document/d/1LzM_XnqVP9GkIqY2_pnTvdrFFe5u78ZPXJizvT70y4o/edit?usp=sharing)
   - [Installation Guide](https://docs.google.com/document/d/1GR2qeMWASApCwk-RbZwvsvWmB1qEz0QU8RcxwjgoDQY/edit?usp=sharing)
-  - [Troubleshooting Guide](https://docs.google.com/document/d/1QDNaB-4S5bd0xeSMEKG0BypeyKP9h2yMQe_7OiwiJes/edit?usp=sharing)
+  - [Troubleshooting Guide](https://docs.google.com/document/d/1E4zUMmSh5PVmP7RXUqQrh7S9IGuxQKPj5EQ5KcT2HYE/edit?usp=sharing)
