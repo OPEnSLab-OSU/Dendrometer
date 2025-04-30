@@ -21,6 +21,9 @@ The Dendrometer is an ongoing project that strives to enable ecological research
 Printed circuit board (PCB) design files for the nodes. 
 ### src: 
 Contains all of the code used on the dendrometer.
+LoRa: Contains the source code for the node sensors and the LTE hub. This uses LoRa batch uploading which will upload all of the collected data at set intervals.
+LoRa Non Batch: Contains the source code for the node sensors and the LTE hub. This will only upload ONE packet of data at set intervals. All of the data is still saved on SD card.
+WiFi: Contains the source code for the WiFi connected nodes.
 
 ## Relevant Documents
   - [Electronics Build Guide](https://docs.google.com/document/d/1BaNuNSJrL86lxKixB8chgZGySgj0bhYSMtVzJu6EDW4/edit?usp=sharing)
