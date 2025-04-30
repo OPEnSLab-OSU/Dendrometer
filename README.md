@@ -17,8 +17,6 @@ The Dendrometer is an ongoing project that strives to enable ecological research
   - Integration with [Loom](https://github.com/OPEnSLab-OSU/Loom-V4), which will allow this device to support plug-and-play functionalities with integrated sensors
 
 ## Directory 
-### Mechanical Components: 
-Drawings and mechanical design files for the carbon fiber Dendrometer mechanical piece and 3D printed parts for the pelican case.
 ### PCB: 
 Printed circuit board (PCB) design files for the nodes. 
 ### src: 
