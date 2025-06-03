@@ -26,7 +26,10 @@ LoRa Non Batch: Contains the source code for the node sensors and the LTE hub. T
 WiFi: Contains the source code for the WiFi connected nodes.
 
 ## Relevant Documents
-  - [Electronics Build Guide](https://docs.google.com/document/d/1BaNuNSJrL86lxKixB8chgZGySgj0bhYSMtVzJu6EDW4/edit?usp=sharing)
-  - [Mechanical Build Guide](https://docs.google.com/document/d/1LzM_XnqVP9GkIqY2_pnTvdrFFe5u78ZPXJizvT70y4o/edit?usp=sharing)
-  - [Installation Guide](https://docs.google.com/document/d/1GR2qeMWASApCwk-RbZwvsvWmB1qEz0QU8RcxwjgoDQY/edit?usp=sharing)
-  - [Troubleshooting Guide](https://docs.google.com/document/d/1E4zUMmSh5PVmP7RXUqQrh7S9IGuxQKPj5EQ5KcT2HYE/edit?usp=sharing)
+* [User Manual](https://docs.google.com/document/d/1OHKa2jYamG2kPEfxrQMzi3MNHZGgkPIG/)
+* [HardwareX Paper](https://www.sciencedirect.com/science/article/pii/S246806722100078X)
+* [Troubleshooting Guide](https://docs.google.com/document/d/1E4zUMmSh5PVmP7RXUqQrh7S9IGuxQKPj5EQ5KcT2HYE/edit?usp=sharing)
+* [Mechanical Assembly Guide](https://docs.google.com/document/d/1LzM_XnqVP9GkIqY2_pnTvdrFFe5u78ZPXJizvT70y4o/edit?usp=sharing)
+* [Electronics Assembly Guide](https://docs.google.com/document/d/1BaNuNSJrL86lxKixB8chgZGySgj0bhYSMtVzJu6EDW4/edit?usp=sharing)
+* [MongoDB Dashboard Guide](https://docs.google.com/document/d/1PlT9hrC62OXXhL8AD17e3FiPCwlHFJaZIvXCRnmihIE/edit?usp=sharing)
+* [Installation Guide (Outdated)](https://docs.google.com/document/d/1GR2qeMWASApCwk-RbZwvsvWmB1qEz0QU8RcxwjgoDQY/edit?usp=sharing)
