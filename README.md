@@ -17,15 +17,19 @@ The Dendrometer is an ongoing project that strives to enable ecological research
   - Integration with [Loom](https://github.com/OPEnSLab-OSU/Loom-V4), which will allow this device to support plug-and-play functionalities with integrated sensors
 
 ## Directory 
-### Mechanical Components: 
-Drawings and mechanical design files for the carbon fiber Dendrometer mechanical piece and 3D printed parts for the pelican case.
 ### PCB: 
 Printed circuit board (PCB) design files for the nodes. 
 ### src: 
 Contains all of the code used on the dendrometer.
+LoRa: Contains the source code for the node sensors and the LTE hub. This uses LoRa batch uploading which will upload all of the collected data at set intervals.
+LoRa Non Batch: Contains the source code for the node sensors and the LTE hub. This will only upload ONE packet of data at set intervals. All of the data is still saved on SD card.
+WiFi: Contains the source code for the WiFi connected nodes.
 
 ## Relevant Documents
-  - [Electronics Build Guide](https://docs.google.com/document/d/1BaNuNSJrL86lxKixB8chgZGySgj0bhYSMtVzJu6EDW4/edit?usp=sharing)
-  - [Mechanical Build Guide](https://docs.google.com/document/d/1LzM_XnqVP9GkIqY2_pnTvdrFFe5u78ZPXJizvT70y4o/edit?usp=sharing)
-  - [Installation Guide](https://docs.google.com/document/d/1GR2qeMWASApCwk-RbZwvsvWmB1qEz0QU8RcxwjgoDQY/edit?usp=sharing)
-  - [Troubleshooting Guide](https://docs.google.com/document/d/1QDNaB-4S5bd0xeSMEKG0BypeyKP9h2yMQe_7OiwiJes/edit?usp=sharing)
+* [User Manual](https://docs.google.com/document/d/1OHKa2jYamG2kPEfxrQMzi3MNHZGgkPIG/)
+* [HardwareX Paper](https://www.sciencedirect.com/science/article/pii/S246806722100078X)
+* [Troubleshooting Guide](https://docs.google.com/document/d/1E4zUMmSh5PVmP7RXUqQrh7S9IGuxQKPj5EQ5KcT2HYE/edit?usp=sharing)
+* [Mechanical Assembly Guide](https://docs.google.com/document/d/1LzM_XnqVP9GkIqY2_pnTvdrFFe5u78ZPXJizvT70y4o/edit?usp=sharing)
+* [Electronics Assembly Guide](https://docs.google.com/document/d/1BaNuNSJrL86lxKixB8chgZGySgj0bhYSMtVzJu6EDW4/edit?usp=sharing)
+* [MongoDB Dashboard Guide](https://docs.google.com/document/d/1PlT9hrC62OXXhL8AD17e3FiPCwlHFJaZIvXCRnmihIE/edit?usp=sharing)
+* [Installation Guide (Outdated)](https://docs.google.com/document/d/1GR2qeMWASApCwk-RbZwvsvWmB1qEz0QU8RcxwjgoDQY/edit?usp=sharing)
