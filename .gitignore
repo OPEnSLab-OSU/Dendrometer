@@ -1,1 +1,4 @@
 .vscode
+src WiFi/node/arduino_secrets.h
+src LoRa NON BATCH/hub/arduino_secrets.h
+src LoRa/hub/arduino_secrets.h
