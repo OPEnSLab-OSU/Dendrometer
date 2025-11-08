@@ -1,4 +1,8 @@
 .vscode
-src WiFi/node/arduino_secrets.h
 src LoRa NON BATCH/hub/arduino_secrets.h
+src LoRa NON BATCH/hub/sd card config files/mqtt_creds.json
 src LoRa/hub/arduino_secrets.h
+src LoRa/hub/sd card config files/mqtt_creds.json
+src WiFi/node/sd card config files/mqtt_creds.json
+src WiFi/node/arduino_secrets.h
+src WiFi/node/sd card config files/wifi_creds.json
