@@ -1,8 +1,8 @@
 {
-    "broker": "cas-mosquitto.biossys.oregonstate.edu",
+    "broker": "",
     "port": 1883,
-    "username": "User",
-    "password": "password",
-    "database": "LB2023_hub",
+    "username": "",
+    "password": "",
+    "database": "",
     "project": ""
 }
