@@ -6,3 +6,8 @@ src LoRa/hub/sd card config files/mqtt_creds.json
 src WiFi/node/sd card config files/mqtt_creds.json
 src WiFi/node/arduino_secrets.h
 src WiFi/node/sd card config files/wifi_creds.json
+
+# Credentials/secrets
+**/arduino_secrets.h
+**/wifi_creds.json
+**/mqtt_creds.json

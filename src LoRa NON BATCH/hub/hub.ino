@@ -58,8 +58,8 @@ void loop()
   static unsigned long timer = millis();
   if (millis() - timer > REPORT_INTERVAL)
       {
-          manager.set_device_name("Hub");
-          manager.set_instance_num(0);
+          // manager.set_device_name("Hub");
+          // manager.set_instance_num(0);
 
           manager.measure();
           manager.package();
