@@ -1,23 +1,26 @@
-#include <Loom_Manager.h> //4.6
-#include <Hardware/Loom_Hypnos/Loom_Hypnos.h>
+#include <Loom_Manager.h> //4.7, doesn't work with 2 devices transmitted packets at same time
+#include <Hardware/Loom_Hypnos/Loom_Hypnos.h> // Tested on 4.7
 #include <Hardware/Actuators/Loom_Neopixel/Loom_Neopixel.h>
 #include <Sensors/Loom_Analog/Loom_Analog.h>
 #include <Sensors/Analog/Loom_Teros10/Loom_Teros10.h>
 #include <Sensors/I2C/Loom_SHT31/Loom_SHT31.h>
 #include <Radio/Loom_LoRa/Loom_LoRa.h>
 
+// Loom Heartbeat
+#include <Heartbeat/Loom_Heartbeat.h>
 
 #include "AS5311.h"
 
 //////////////////////////
 /* DEVICE CONFIGURATION */
 //////////////////////////
-static const uint8_t NODE_NUMBER = 11;
-static const char * DEVICE_NAME = "Dendrometer_";
+static const uint8_t NODE_NUMBER = 2;
+static const char * DEVICE_NAME = "RefurbSingle_";
 ////Select one wireless communication option
 #define DENDROMETER_LORA
+
 TimeSpan sleepInterval;
-static const uint8_t TRANSMIT_INTERVAL = 96; // to save power, only transmit every X measurements
+static const uint8_t TRANSMIT_INTERVAL = 4; // to save power, only transmit every X measurements
 ////Use teros 10?
 //#define DENDROMETER_TEROS10
 //////////////////////////
@@ -38,18 +41,22 @@ Loom_Analog analog(manager);
 Loom_Teros10 teros(manager, A0);
 #endif
 Loom_SHT31 sht(manager);
-Loom_Neopixel statusLight(manager, false, false, true, NEO_RGB); // using channel 2 (physical pin A2). use RGB for through-hole LED devices. GRB otherwise.
+Loom_Neopixel statusLight(manager, false, false, true, NEO_GRB); // using channel 2 (physical pin A2). use RGB for through-hole LED devices. GRB otherwise.
 
 // magnet sensor
 AS5311 magnetSensor(AS5311_CS, AS5311_CLK, AS5311_DO);
 
 // wireless
-
 #if defined DENDROMETER_LORA
 Loom_LoRa lora(manager, NODE_NUMBER);
 #else
 #warning Wireless communication disabled!
 #endif
+
+// heartbeat instantiation
+uint32_t hbInterval_s = 60;
+uint32_t normalInterval_s = 90;
+Loom_Heartbeat heartbeat(hbInterval_s, normalInterval_s, &manager, &hypnos);
 
 // Global Variables
 volatile bool buttonPressed = false; // Check to see if button was pressed
@@ -61,6 +68,7 @@ void ISR_BUTTON();
 void measure();
 void measureVPD();
 void transmit();
+void heartbeat_transmit();
 
 void setRTC(bool);
 void checkMagnetSensor();
@@ -76,11 +84,11 @@ void setup()
 {
 
     pinMode(BUTTON_PIN, INPUT_PULLUP); // Enable pullup on button pin. this is necessary for the interrupt (and the button check on the next line)
-    delay(10);
-    bool userInput = !digitalRead(BUTTON_PIN); // wait for serial connection ONLY button is pressed (low reading)
-    manager.beginSerial(userInput);            // wait for serial connection ONLY button is pressed
-
-    hypnos.setLogName("data"); //SD card CSV file name
+    delay(10);      // hold down device button to reset time 
+    bool userInput = !digitalRead(BUTTON_PIN); // wait for serial connection ONLY if button is pressed (low reading)
+    manager.beginSerial(userInput);            // wait for serial connection ONLY if button is pressed
+    
+    hypnos.setLogName("RefurbSingle_2data"); //SD card CSV file name
     hypnos.enable();
     sleepInterval = hypnos.getConfigFromSD("HypnosConfig.json");
 
@@ -91,6 +99,9 @@ void setup()
     alignMagnetSensor();
 
     hypnos.registerInterrupt(ISR_RTC);
+
+    heartbeat.sanitizeIntervals();
+    hypnos.clearAlarms();
 }
 
 /**
@@ -98,7 +109,8 @@ void setup()
  */
 void loop()
 {
-    measure();
+    heartbeat.adjustHbFlagFromAlarms();
+
     if (buttonPressed) // if interrupt button was pressed, display staus of magnet sensor
     {
         displayMagnetStatus(magnetSensor.getMagnetStatus());
@@ -106,7 +118,18 @@ void loop()
         statusLight.set_color(2, 0, 0, 0, 0); // LED Off
         buttonPressed = false;
     }
-    transmit();
+
+    if(heartbeat.getHeartbeatFlag()) 
+    {
+        heartbeat_transmit();
+    }
+    else 
+    {
+        Serial.println("Within Main Branch");
+        measure();
+        transmit();
+    }
+    
     sleepCycle();
 }
 
@@ -162,19 +185,44 @@ void transmit()
     }
 }
 
+void heartbeat_transmit() {
+    Serial.println("Within Heartbeat Branch");
+
+    heartbeat.flashLight();
+
+    const uint16_t JSON_HEARTBEAT_BUFFER_SIZE = 300;
+    StaticJsonDocument<JSON_HEARTBEAT_BUFFER_SIZE> payload;
+    heartbeat.createJSONPayload(payload);
+
+    // append any additional information you wish to send over heartbeat
+    payload["exampleField"] = "example";
+    JsonObject nestedJson = payload.createNestedObject("NestedName");
+    nestedJson["nestExample1"] = "nest1";
+    nestedJson["nestExample2"] = "nest2";
+
+    lora.send(0, payload.as<JsonObject>());
+}
+
 /**
  * Shut down the device for a specified time period to save power.
  */
 void sleepCycle()
 {
-    hypnos.setInterruptDuration(sleepInterval);
+    // set up both alarms for the heartbeat mode using the specified intervals earlier.
+    heartbeat.ensureHeartbeatHypnosAlarmsActive();
+
+    // hypnos.setInterruptDuration(sleepInterval);
     // Reattach to the interrupt after we have set the alarm so we can have repeat triggers
     hypnos.reattachRTCInterrupt();
     attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), ISR_BUTTON, FALLING);
 
+    Serial.flush(); // Forces all serial log messages in buffer to print now.
+
     // Put the device into a deep sleep, operation HALTS here until the interrupt is triggered
     hypnos.sleep();
     detachInterrupt(digitalPinToInterrupt(BUTTON_PIN));
+
+    delay(100); // CRITICAL: Without this delay, output and operation does not align with expectations.
 }
 
 // Interrupt routines

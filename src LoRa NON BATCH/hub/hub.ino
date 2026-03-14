@@ -1,7 +1,9 @@
 #include "arduino_secrets.h"
 
-#include <Loom_Manager.h> //4.7
+#include <Loom_Manager.h>
 
+// Heartbeat
+#include <Heartbeat/Loom_Heartbeat.h>
 #include <Hardware/Loom_Hypnos/Loom_Hypnos.h>
 #include <Radio/Loom_LoRa/Loom_LoRa.h>
 #include <Sensors/Loom_Analog/Loom_Analog.h>
@@ -10,12 +12,17 @@
 
 const unsigned long REPORT_INTERVAL = 1 * 60 * 60 * 1000;
 
-Manager manager("Hub", 0);
+Manager manager("LB_Hub", 0);
 Loom_Hypnos hypnos(manager, HYPNOS_VERSION::V3_3, TIME_ZONE::PST);
 Loom_Analog batteryVoltage(manager);
 Loom_LoRa lora(manager);
 Loom_LTE lte(manager, "hologram", "", "", A5);
 Loom_MongoDB mqtt(manager, lte, SECRET_BROKER, SECRET_PORT, DATABASE, BROKER_USER, BROKER_PASS);
+
+// heartbeat instantiation
+uint32_t hbInterval_s = 15;
+uint32_t normalInterval_s = 35;
+Loom_Heartbeat heartbeat(hbInterval_s, normalInterval_s, &manager);
 
 
 int packetNumber = 0;
@@ -23,14 +30,15 @@ void setup()
 {
 
   /* Enables logging logs to the SD card for later viewing under the 'debug' folder */
-  ENABLE_SD_LOGGING;   
+  // ENABLE_SD_LOGGING;   
   
   /* Enables generation of function summaries */
-  ENABLE_FUNC_SUMMARIES;
+  // ENABLE_FUNC_SUMMARIES;
     // Start the serial interface
     manager.beginSerial();
 
     // Enable the power rails on the hypnos
+    hypnos.setLogName("LB_Hub");
     hypnos.enable();
 
     setRTC();
@@ -58,8 +66,8 @@ void loop()
   static unsigned long timer = millis();
   if (millis() - timer > REPORT_INTERVAL)
       {
-          // manager.set_device_name("Hub");
-          // manager.set_instance_num(0);
+          manager.set_device_name("LB_Hub");
+          manager.set_instance_num(0);
 
           manager.measure();
           manager.package();
