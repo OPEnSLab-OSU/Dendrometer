@@ -12,12 +12,13 @@
 //////////////////////////
 /* DEVICE CONFIGURATION */
 //////////////////////////
-static const uint8_t NODE_NUMBER = 11;
-static const char * DEVICE_NAME = "Dendrometer_";
+static const uint8_t NODE_NUMBER = 2;
+static const char * DEVICE_NAME = "HndshkRefurb_";
 ////Select one wireless communication option
 #define DENDROMETER_LORA
+
 TimeSpan sleepInterval;
-static const uint8_t TRANSMIT_INTERVAL = 96; // to save power, only transmit every X measurements
+static const uint8_t TRANSMIT_INTERVAL = 4; // to save power, only transmit every X measurements
 ////Use teros 10?
 //#define DENDROMETER_TEROS10
 //////////////////////////
@@ -38,13 +39,12 @@ Loom_Analog analog(manager);
 Loom_Teros10 teros(manager, A0);
 #endif
 Loom_SHT31 sht(manager);
-Loom_Neopixel statusLight(manager, false, false, true, NEO_RGB); // using channel 2 (physical pin A2). use RGB for through-hole LED devices. GRB otherwise.
+Loom_Neopixel statusLight(manager, false, false, true, NEO_GRB); // using channel 2 (physical pin A2). use RGB for through-hole LED devices. GRB otherwise.
 
 // magnet sensor
 AS5311 magnetSensor(AS5311_CS, AS5311_CLK, AS5311_DO);
 
 // wireless
-
 #if defined DENDROMETER_LORA
 Loom_LoRa lora(manager, NODE_NUMBER);
 #else
@@ -76,11 +76,11 @@ void setup()
 {
 
     pinMode(BUTTON_PIN, INPUT_PULLUP); // Enable pullup on button pin. this is necessary for the interrupt (and the button check on the next line)
-    delay(10);
-    bool userInput = !digitalRead(BUTTON_PIN); // wait for serial connection ONLY button is pressed (low reading)
-    manager.beginSerial(userInput);            // wait for serial connection ONLY button is pressed
-
-    hypnos.setLogName("data"); //SD card CSV file name
+    delay(10);      // hold down device button to reset time 
+    bool userInput = !digitalRead(BUTTON_PIN); // wait for serial connection ONLY if button is pressed (low reading)
+    manager.beginSerial(userInput);            // wait for serial connection ONLY if button is pressed
+    
+    hypnos.setLogName("HndshkRefurb_2data"); //SD card CSV file name
     hypnos.enable();
     sleepInterval = hypnos.getConfigFromSD("HypnosConfig.json");
 
