@@ -10,7 +10,7 @@
 
 const unsigned long REPORT_INTERVAL = 1 * 60 * 60 * 1000;
 
-Manager manager("Hub", 0);
+Manager manager("LBHub2023", 0);
 Loom_Hypnos hypnos(manager, HYPNOS_VERSION::V3_3, TIME_ZONE::PST);
 Loom_Analog batteryVoltage(manager);
 Loom_LoRa lora(manager);
@@ -49,7 +49,7 @@ void setup()
 void loop()
 {
     // Wait 5 seconds for a message
-    if (lora.receive(5000))
+    if (lora.receive(5000, true))
     {
         manager.display_data();
         hypnos.logToSD();
