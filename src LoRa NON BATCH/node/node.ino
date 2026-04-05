@@ -1,10 +1,10 @@
-#include <Loom_Manager.h> //4.6
+#include <Loom_Manager.h> 
 #include <Hardware/Loom_Hypnos/Loom_Hypnos.h>
 #include <Hardware/Actuators/Loom_Neopixel/Loom_Neopixel.h>
 #include <Sensors/Loom_Analog/Loom_Analog.h>
 #include <Sensors/Analog/Loom_Teros10/Loom_Teros10.h>
 #include <Sensors/I2C/Loom_SHT31/Loom_SHT31.h>
-#include <Radio/Loom_LoRa/Loom_LoRa.h>
+// #include <Radio/Loom_LoRa/Loom_LoRa.h>
 
 
 #include "AS5311.h"
@@ -12,13 +12,13 @@
 //////////////////////////
 /* DEVICE CONFIGURATION */
 //////////////////////////
-static const uint8_t NODE_NUMBER = 2;
-static const char * DEVICE_NAME = "HndshkRefurb_";
+static const uint8_t NODE_NUMBER = 0;
+static const char * DEVICE_NAME = "DeviceName_";
 ////Select one wireless communication option
-#define DENDROMETER_LORA
+// #define DENDROMETER_LORA
 
 TimeSpan sleepInterval;
-static const uint8_t TRANSMIT_INTERVAL = 4; // to save power, only transmit every X measurements
+// static const uint8_t TRANSMIT_INTERVAL = 4; // to save power, only transmit every X measurements
 ////Use teros 10?
 //#define DENDROMETER_TEROS10
 //////////////////////////
@@ -80,7 +80,7 @@ void setup()
     bool userInput = !digitalRead(BUTTON_PIN); // wait for serial connection ONLY if button is pressed (low reading)
     manager.beginSerial(userInput);            // wait for serial connection ONLY if button is pressed
     
-    hypnos.setLogName("HndshkRefurb_2data"); //SD card CSV file name
+    hypnos.setLogName("DeviceName_0data"); //SD card CSV file name
     hypnos.enable();
     sleepInterval = hypnos.getConfigFromSD("HypnosConfig.json");
 
@@ -106,7 +106,7 @@ void loop()
         statusLight.set_color(2, 0, 0, 0, 0); // LED Off
         buttonPressed = false;
     }
-    transmit();
+    // transmit();
     sleepCycle();
 }
 
