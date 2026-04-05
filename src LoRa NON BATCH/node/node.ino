@@ -151,7 +151,7 @@ void measureVPD()
 /**
  * transmit the batch data packet over LoRa
  */
-void transmit()
+/* void transmit()
 {
     static uint8_t loopCounter = TRANSMIT_INTERVAL - 2;
     loopCounter++;
@@ -160,7 +160,7 @@ void transmit()
         lora.send(0);
         loopCounter = 0;
     }
-}
+}*/
 
 /**
  * Shut down the device for a specified time period to save power.
