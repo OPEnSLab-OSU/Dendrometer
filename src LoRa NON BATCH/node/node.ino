@@ -12,8 +12,8 @@
 //////////////////////////
 /* DEVICE CONFIGURATION */
 //////////////////////////
-static const uint8_t NODE_NUMBER = 2;
-static const char * DEVICE_NAME = "HndshkRefurb_";
+static const uint8_t NODE_NUMBER = 1;
+static const char * DEVICE_NAME = "NodeName_";
 ////Select one wireless communication option
 #define DENDROMETER_LORA
 
@@ -80,7 +80,7 @@ void setup()
     bool userInput = !digitalRead(BUTTON_PIN); // wait for serial connection ONLY if button is pressed (low reading)
     manager.beginSerial(userInput);            // wait for serial connection ONLY if button is pressed
     
-    hypnos.setLogName("HndshkRefurb_2data"); //SD card CSV file name
+    hypnos.setLogName("NodeName_1data"); //SD card CSV file name
     hypnos.enable();
     sleepInterval = hypnos.getConfigFromSD("HypnosConfig.json");
 
