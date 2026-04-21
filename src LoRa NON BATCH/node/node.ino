@@ -53,6 +53,8 @@ Loom_LoRa lora(manager, NODE_NUMBER);
 
 // Global Variables
 volatile bool buttonPressed = false; // Check to see if button was pressed
+volatile bool handshakeCollision = false;
+const TimeSpan handshakeCollisionTime = TimeSpan(0, 0, 0, 10);
 
 void sleepCycle();
 void ISR_RTC();
@@ -157,8 +159,14 @@ void transmit()
     loopCounter++;
     if (loopCounter >= TRANSMIT_INTERVAL)
     {
-        lora.send(0);
-        loopCounter = 0;
+        if(lora.send(0)) {
+            loopCounter = 0;
+        }
+        else {
+            Serial.println("Send failed, handshake collision occured");
+            handshakeCollision = true;
+            loopCounter--;
+        }
     }
 }
 
@@ -167,7 +175,15 @@ void transmit()
  */
 void sleepCycle()
 {
-    hypnos.setInterruptDuration(sleepInterval);
+    if(handshakeCollision) {
+        hypnos.setInterruptDuration(handshakeCollisionTime);
+        Serial.println("Setting short interrupt due to handshake collision");
+        handshakeCollision = false;
+    }
+    else {
+        hypnos.setInterruptDuration(sleepInterval);
+    }
+
     // Reattach to the interrupt after we have set the alarm so we can have repeat triggers
     hypnos.reattachRTCInterrupt();
     attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), ISR_BUTTON, FALLING);
