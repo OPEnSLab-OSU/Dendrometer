@@ -50,7 +50,7 @@ void setup() {
 
 void loop() {
   // Wait 5 seconds for a message
-  if (lora.receive(5000)) {
+  if (lora.receive(5000, true)) {
     manager.display_data();
     hypnos.logToSD();
     mqtt.publish();
