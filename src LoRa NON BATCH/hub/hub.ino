@@ -12,7 +12,7 @@
 
 const unsigned long REPORT_INTERVAL = 1 * 60 * 60 * 1000;
 
-Manager manager("LB_Hub", 0);
+Manager manager("Hub_Name", 0);
 Loom_Hypnos hypnos(manager, HYPNOS_VERSION::V3_3, TIME_ZONE::PST);
 Loom_Analog batteryVoltage(manager);
 Loom_LoRa lora(manager);
@@ -32,7 +32,7 @@ void setup() {
   manager.beginSerial();
 
   // Enable the power rails on the hypnos
-  hypnos.setLogName("LB_Hub");
+  hypnos.setLogName("Hub_Name");
   hypnos.enable();
 
   setRTC();
@@ -57,7 +57,7 @@ void loop() {
   }
   static unsigned long timer = millis();
   if (millis() - timer > REPORT_INTERVAL) {
-    manager.set_device_name("LB_Hub");
+    manager.set_device_name("Hub_Name");
     manager.set_instance_num(0);
 
     manager.measure();
