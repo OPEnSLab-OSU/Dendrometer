@@ -15,7 +15,7 @@
 /* DEVICE CONFIGURATION */
 //////////////////////////
 static const uint8_t NODE_NUMBER = 2;
-static const char * DEVICE_NAME = "RefurbSingle_";
+static const char * DEVICE_NAME = "Refurb_";
 ////Select one wireless communication option
 #define DENDROMETER_LORA
 
@@ -54,7 +54,7 @@ Loom_LoRa lora(manager, NODE_NUMBER);
 #endif
 
 // heartbeat instantiation
-uint32_t hbInterval_s = 60;
+uint32_t hbInterval_s = 60; // use intervals of 60 seconds
 uint32_t normalInterval_s = 90;
 Loom_Heartbeat heartbeat(hbInterval_s, normalInterval_s, &manager, &hypnos);
 
@@ -88,7 +88,7 @@ void setup()
     bool userInput = !digitalRead(BUTTON_PIN); // wait for serial connection ONLY if button is pressed (low reading)
     manager.beginSerial(userInput);            // wait for serial connection ONLY if button is pressed
     
-    hypnos.setLogName("RefurbSingle_2data"); //SD card CSV file name
+    hypnos.setLogName("Refurb_2data"); //SD card CSV file name
     hypnos.enable();
     sleepInterval = hypnos.getConfigFromSD("HypnosConfig.json");
 

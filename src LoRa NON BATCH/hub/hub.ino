@@ -19,84 +19,73 @@ Loom_LoRa lora(manager);
 Loom_LTE lte(manager, "hologram", "", "", A5);
 Loom_MongoDB mqtt(manager, lte, SECRET_BROKER, SECRET_PORT, DATABASE, BROKER_USER, BROKER_PASS);
 
-// heartbeat instantiation
-uint32_t hbInterval_s = 15;
-uint32_t normalInterval_s = 35;
-Loom_Heartbeat heartbeat(hbInterval_s, normalInterval_s, &manager);
-
 
 int packetNumber = 0;
-void setup()
-{
+void setup() {
 
   /* Enables logging logs to the SD card for later viewing under the 'debug' folder */
-  // ENABLE_SD_LOGGING;   
-  
+  // ENABLE_SD_LOGGING;
+
   /* Enables generation of function summaries */
   // ENABLE_FUNC_SUMMARIES;
-    // Start the serial interface
-    manager.beginSerial();
+  // Start the serial interface
+  manager.beginSerial();
 
-    // Enable the power rails on the hypnos
-    hypnos.setLogName("LB_Hub");
-    hypnos.enable();
+  // Enable the power rails on the hypnos
+  hypnos.setLogName("LB_Hub");
+  hypnos.enable();
 
-    setRTC();
+  setRTC();
 
-    // Sets the LTE board to use batch SD to only start when we actually need to publish data
+  // Sets the LTE board to use batch SD to only start when we actually need to publish data
 
 
 
-    // load MQTT credentials from the SD card, if they exist
-    mqtt.loadConfigFromJSON(hypnos.readFile("mqtt_creds.json"));
+  // load MQTT credentials from the SD card, if they exist
+  mqtt.loadConfigFromJSON(hypnos.readFile("mqtt_creds.json"));
 
-    // Initialize the modules
-    manager.initialize();
+  // Initialize the modules
+  manager.initialize();
 }
 
-void loop()
-{
-    // Wait 5 seconds for a message
-    if (lora.receive(5000))
-    {
-        manager.display_data();
-        hypnos.logToSD();
-        mqtt.publish();
-    }
+void loop() {
+  // Wait 5 seconds for a message
+  if (lora.receive(5000)) {
+    manager.display_data();
+    hypnos.logToSD();
+    mqtt.publish();
+  }
   static unsigned long timer = millis();
-  if (millis() - timer > REPORT_INTERVAL)
-      {
-          manager.set_device_name("LB_Hub");
-          manager.set_instance_num(0);
+  if (millis() - timer > REPORT_INTERVAL) {
+    manager.set_device_name("LB_Hub");
+    manager.set_instance_num(0);
 
-          manager.measure();
-          manager.package();
-          manager.display_data();
-          mqtt.publish();
-          
-          timer = millis();
-      }
+    manager.measure();
+    manager.package();
+    manager.display_data();
+    mqtt.publish();
+
+    timer = millis();
+  }
 }
 
 
-void setRTC()
-{
-    if (!Serial)
-        return;
+void setRTC() {
+  if (!Serial)
+    return;
 
-    Serial.println(F("Adjust RTC time? (y/n)"));
-    unsigned long timer = millis();
-    while (!Serial.available() && (millis() - timer) < 7000)
-        ;
-    if (!Serial.available())
-        return;
-    int val = Serial.read();
-    delay(50);
-    while (Serial.available())
-        Serial.read(); // flush the input buffer to avoid invalid input to rtc function
+  Serial.println(F("Adjust RTC time? (y/n)"));
+  unsigned long timer = millis();
+  while (!Serial.available() && (millis() - timer) < 7000)
+    ;
+  if (!Serial.available())
+    return;
+  int val = Serial.read();
+  delay(50);
+  while (Serial.available())
+    Serial.read();  // flush the input buffer to avoid invalid input to rtc function
 
-    if (val == 'y')
-    {
-        hypnos.set_custom_time();
-    }
+  if (val == 'y') {
+    hypnos.set_custom_time();
+  }
 }
