@@ -14,8 +14,8 @@
 //////////////////////////
 /* DEVICE CONFIGURATION */
 //////////////////////////
-static const uint8_t NODE_NUMBER = 2;
-static const char * DEVICE_NAME = "Refurb_";
+static const uint8_t NODE_NUMBER = 24;
+static const char * DEVICE_NAME = "SOREC_";
 ////Select one wireless communication option
 #define DENDROMETER_LORA
 
@@ -41,7 +41,7 @@ Loom_Analog analog(manager);
 Loom_Teros10 teros(manager, A0);
 #endif
 Loom_SHT31 sht(manager);
-Loom_Neopixel statusLight(manager, false, false, true, NEO_GRB); // using channel 2 (physical pin A2). use RGB for through-hole LED devices. GRB otherwise.
+Loom_Neopixel statusLight(manager, false, false, true, NEO_RGB); // using channel 2 (physical pin A2). use RGB for through-hole LED devices. GRB otherwise.
 
 // magnet sensor
 AS5311 magnetSensor(AS5311_CS, AS5311_CLK, AS5311_DO);
@@ -54,8 +54,8 @@ Loom_LoRa lora(manager, NODE_NUMBER);
 #endif
 
 // heartbeat instantiation
-uint32_t hbInterval_s = 60; // use intervals of 60 seconds
-uint32_t normalInterval_s = 90;
+uint32_t hbInterval_s = 300; // use intervals of 60 seconds
+uint32_t normalInterval_s = 900;
 Loom_Heartbeat heartbeat(hbInterval_s, normalInterval_s, &manager, &hypnos);
 
 // Global Variables
@@ -88,7 +88,7 @@ void setup()
     bool userInput = !digitalRead(BUTTON_PIN); // wait for serial connection ONLY if button is pressed (low reading)
     manager.beginSerial(userInput);            // wait for serial connection ONLY if button is pressed
     
-    hypnos.setLogName("Refurb_2data"); //SD card CSV file name
+    hypnos.setLogName("SOREC_24data"); //SD card CSV file name
     hypnos.enable();
     sleepInterval = hypnos.getConfigFromSD("HypnosConfig.json");
 
@@ -176,13 +176,13 @@ void measureVPD()
  */
 void transmit()
 {
-    static uint8_t loopCounter = TRANSMIT_INTERVAL - 2;
-    loopCounter++;
-    if (loopCounter >= TRANSMIT_INTERVAL)
-    {
+    // static uint8_t loopCounter = TRANSMIT_INTERVAL - 2;
+    // loopCounter++;
+    // if (loopCounter >= TRANSMIT_INTERVAL)
+    // {
         lora.send(0);
-        loopCounter = 0;
-    }
+    //    loopCounter = 0;
+    // }
 }
 
 void heartbeat_transmit() {
