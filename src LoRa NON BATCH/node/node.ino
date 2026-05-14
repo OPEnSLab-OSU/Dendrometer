@@ -5,7 +5,7 @@
 #include <Sensors/Analog/Loom_Teros10/Loom_Teros10.h>
 #include <Sensors/I2C/Loom_SHT31/Loom_SHT31.h>
 #include <Radio/Loom_LoRa/Loom_LoRa.h>
-
+#include <Heartbeat/Heartbeat.h>
 
 #include "AS5311.h"
 
@@ -47,9 +47,11 @@ AS5311 magnetSensor(AS5311_CS, AS5311_CLK, AS5311_DO);
 // wireless
 #if defined DENDROMETER_LORA
 Loom_LoRa lora(manager, NODE_NUMBER);
-#else
+#else                                                                                                                                                                       
 #warning Wireless communication disabled!
 #endif
+
+Loom_Heartbeat heartbeat(4, &manager, &hypnos, &lora);
 
 // Global Variables
 volatile bool buttonPressed = false; // Check to see if button was pressed
@@ -106,7 +108,14 @@ void loop()
         statusLight.set_color(2, 0, 0, 0, 0); // LED Off
         buttonPressed = false;
     }
-    transmit();
+    if (heartbeat.getHeartbeatFlag()) {
+        heartbeat.makeHeartbeat();
+        magnetSensor.recordMagnetStatusHeartbeat(heartbeat);
+        heartbeat.transmit(0);
+    }
+    else {
+        transmit();
+    }
     sleepCycle();
 }
 
@@ -153,13 +162,13 @@ void measureVPD()
  */
 void transmit()
 {
-    static uint8_t loopCounter = TRANSMIT_INTERVAL - 2;
-    loopCounter++;
-    if (loopCounter >= TRANSMIT_INTERVAL)
-    {
+    //static uint8_t loopCounter = TRANSMIT_INTERVAL - 2;
+    //loopCounter++;
+    //if (loopCounter >= TRANSMIT_INTERVAL)
+    //{
         lora.send(0);
-        loopCounter = 0;
-    }
+    //    loopCounter = 0;
+    //}
 }
 
 /**
@@ -309,3 +318,4 @@ void setRTC(bool wait)
         hypnos.set_custom_time();
     }
 }
+

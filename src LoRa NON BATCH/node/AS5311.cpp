@@ -225,3 +225,24 @@ void AS5311::recordMagnetStatus(Manager &manager)
         break;
     }
 }
+
+void AS5311::recordMagnetStatusHeartbeat(Loom_Heartbeat &heartbeat)
+{
+    magnetStatus status = getMagnetStatus();
+    switch (status)
+    {
+    case magnetStatus::red:
+        heartbeat.addData("AS5311", "Alignment", "Red");
+        break;
+    case magnetStatus::yellow:
+        heartbeat.addData("AS5311", "Alignment", "Yellow");
+        break;
+    case magnetStatus::green:
+        heartbeat.addData("AS5311", "Alignment", "Green");
+        break;
+    case magnetStatus::error: // fall through
+    default:
+        heartbeat.addData("AS5311", "Alignment", "Error");
+        break;
+    }
+}

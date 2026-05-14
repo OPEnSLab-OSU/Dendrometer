@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <Loom_Manager.h>
+#include <Heartbeat/Heartbeat.h>
 
 enum class magnetStatus
 {
@@ -22,6 +23,7 @@ public:
     
     void measure(Manager &);
     float measureDisplacement(int);
+    void recordMagnetStatusHeartbeat(Loom_Heartbeat &heartbeat);
 
 private:
     const uint8_t CS_PIN;
