@@ -52,13 +52,15 @@ void loop()
     if (lora.receive(5000, true))
     {
         manager.display_data();
-        hypnos.logToSD();
+        if(manager.getDocument()["type"] != "heartbeat") {
+            hypnos.logToSD();
+        }
         mqtt.publish();
     }
   static unsigned long timer = millis();
   if (millis() - timer > REPORT_INTERVAL)
       {
-          manager.set_device_name("Hub");
+          manager.set_device_name("HubName");
           manager.set_instance_num(0);
 
           manager.measure();
